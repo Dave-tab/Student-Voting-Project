@@ -1336,3 +1336,614 @@ Results shall only be published after vote counting has completed successfully.
 Published elections shall be archived automatically.
 
 Archived elections become permanently read-only while remaining available for reporting and auditing.
+
+---
+
+# Workflow States
+
+## Purpose
+
+The Student Online Voting Platform uses a state-driven workflow architecture.
+
+Every major system process exists in a defined state.
+
+A state represents the current stage of a process.
+
+The system shall validate the current state before allowing any action.
+
+If an operation is not permitted in the current state, it shall be rejected.
+
+This prevents unauthorized operations, accidental modifications, and inconsistent election data.
+
+State validation shall be enforced by:
+
+- Frontend validation
+- Backend authorization
+- PostgreSQL constraints
+- PostgreSQL functions
+- Row Level Security (RLS)
+
+---
+
+# 9. System Workflow
+
+## 9.1 Overall System Workflow
+
+### 9.1.1 Purpose
+
+The Student Online Voting Platform shall provide a structured workflow that governs all activities from election planning to result publication and archival.
+
+The workflow ensures that every election follows a consistent, transparent, secure, and auditable process.
+
+Only authorized users shall be permitted to perform actions assigned to their roles, and every stage of the election shall be completed before the next stage begins.
+
+---
+
+### 9.1.2 Overall Election Workflow
+
+The system shall support the following workflow:
+
+1. Election Planning
+2. Election Creation
+3. Election Voter Register Import
+4. Register Validation
+5. Student Account Activation
+6. Candidate Nomination
+7. Candidate Review and Approval
+8. Election Preparation
+9. Election Opens
+10. Student Voting
+11. Election Closes
+12. Vote Counting
+13. Result Publication
+14. Election Archiving
+
+---
+
+### 9.1.3 Functional Requirements
+
+The system shall:
+
+- Allow Electoral Officers to create elections.
+- Require a valid election voter register before student activation begins.
+- Validate imported voter registers before use.
+- Permit only activated and eligible students to participate.
+- Allow only approved candidates to appear on the ballot.
+- Automatically open and close elections according to configured dates and times.
+- Ensure each eligible student votes only once for each position.
+- Automatically count valid votes after the election closes.
+- Publish election results only after vote counting is completed.
+- Archive completed elections while preserving historical records.
+
+---
+
+### 9.1.4 Election Integrity Principles
+
+To preserve the credibility of every election, the system shall enforce the following principles:
+
+- One eligible student shall cast only one vote per position in an election.
+- Ballot secrecy shall always be preserved.
+- Vote records shall remain anonymous.
+- Every administrative activity shall be logged.
+- Election results shall not be altered after publication.
+- Archived elections shall remain read-only.
+- Every election shall follow the approved workflow from planning to archiving.
+
+These principles shall apply to every election conducted using the Student Online Voting Platform.
+
+---
+
+## 9.2 Student Workflow
+
+### Purpose
+
+The Student Workflow defines the sequence of activities performed by students from account activation through participation in an election.
+
+The workflow ensures that only eligible students can access the system, participate in elections, and cast valid votes while maintaining ballot secrecy, election integrity, and accountability.
+
+---
+
+### Student Workflow Process
+
+The Student Workflow shall follow the sequence below:
+
+1. Student receives account activation instructions.
+2. Student activates their account.
+3. Student logs into the system.
+4. System authenticates the student's identity.
+5. System verifies the student's eligibility for available elections.
+6. Student accesses the dashboard.
+7. Student views eligible active elections.
+8. Student selects an election.
+9. Student reviews the list of approved candidates.
+10. Student casts votes for available positions.
+11. System validates the submitted votes.
+12. System securely records the anonymous ballots.
+13. System generates a unique vote reference.
+14. Student receives vote confirmation.
+15. Student logs out of the system.
+
+---
+
+### Functional Requirements
+
+The system shall:
+
+- Allow eligible students to activate their accounts before participating in any election.
+- Authenticate students before granting access to protected resources.
+- Verify student eligibility before displaying available elections.
+- Display only elections for which the student is eligible.
+- Display only approved candidates on the ballot.
+- Allow students to vote only during the official election period.
+- Prevent inactive or suspended students from accessing the voting portal.
+- Ensure each student votes only once for each elective position.
+- Generate a unique vote reference after successful vote submission.
+- Display a confirmation message after votes have been successfully recorded.
+- Preserve the anonymity of every submitted ballot.
+- Prevent modification of submitted votes.
+- Record the date and time of every successful vote submission.
+- Automatically log students out after prolonged inactivity.
+
+---
+
+### Student Voting Rules
+
+The system shall enforce the following rules during the voting process:
+
+- A student shall only participate in elections assigned to their department, programme and level.
+- A student shall not vote before the election opening time.
+- A student shall not vote after the election closing time.
+- A student shall not vote more than once for the same position.
+- A student shall not vote for candidates outside their assigned election.
+- A student shall not view election results before official publication.
+- A student shall not edit or withdraw a submitted vote.
+- Every successful vote shall generate a unique vote reference.
+- Every submitted ballot shall remain anonymous throughout the election lifecycle.
+
+---
+
+### Exception Handling
+
+The system shall appropriately respond to the following situations:
+
+- Student enters incorrect login credentials.
+- Student account has not been activated.
+- Student account is suspended or disabled.
+- Student is not included in the election voter register.
+- Student is not eligible for the selected election.
+- Election has not yet started.
+- Election has already ended.
+- Student attempts to vote more than once for the same position.
+- Student attempts to access another department's election.
+- Internet connection is interrupted during vote submission.
+- Student session expires due to inactivity.
+
+In each case, the system shall display a clear, user-friendly error message without exposing sensitive system information.
+
+---
+
+### Election Integrity Requirements
+
+To ensure a secure and trustworthy voting process, the system shall:
+
+- Verify student eligibility before allowing ballot access.
+- Validate every submitted vote before recording it.
+- Record each successful vote only once.
+- Prevent duplicate vote submissions.
+- Preserve ballot anonymity at all times.
+- Generate a unique vote reference for every successful voting session.
+- Maintain complete audit logs for authentication and voting activities without revealing ballot contents.
+- Ensure that network interruptions, browser refreshes or repeated submissions do not result in duplicate votes.
+
+---
+
+## 9.3 Electoral Officer Workflow
+
+### Purpose
+
+The Electoral Officer Workflow defines the sequence of activities performed by Electoral Officers in planning, managing, monitoring, and concluding elections.
+
+The workflow ensures that elections are conducted in accordance with institutional policies while maintaining fairness, transparency, accountability, and election integrity.
+
+---
+
+### Electoral Officer Workflow Process
+
+The Electoral Officer Workflow shall follow the sequence below:
+
+1. Electoral Officer logs into the system.
+2. System authenticates the Electoral Officer.
+3. Electoral Officer accesses the administration dashboard.
+4. Electoral Officer creates a new election.
+5. Electoral Officer configures election details.
+6. Electoral Officer imports the election voter register.
+7. System validates the imported voter register.
+8. Electoral Officer reviews validation results.
+9. Electoral Officer opens student account activation.
+10. Electoral Officer receives and reviews candidate nominations.
+11. Electoral Officer approves or rejects candidate applications.
+12. Electoral Officer assigns approved candidates to elective positions.
+13. Electoral Officer publishes the list of approved candidates.
+14. Electoral Officer monitors election activities.
+15. Electoral Officer oversees the election until the closing time.
+16. System automatically closes the election.
+17. System counts all valid votes.
+18. Electoral Officer reviews election results.
+19. Electoral Officer publishes the official election results.
+20. Electoral Officer archives the completed election.
+
+---
+
+### Functional Requirements
+
+The system shall:
+
+- Allow Electoral Officers to create and configure elections.
+- Allow Electoral Officers to define election schedules.
+- Allow Electoral Officers to import election voter registers.
+- Validate imported voter registers before use.
+- Display validation reports for imported registers.
+- Allow Electoral Officers to activate eligible students.
+- Allow Electoral Officers to review candidate nominations.
+- Allow Electoral Officers to approve or reject candidates.
+- Allow Electoral Officers to assign approved candidates to elective positions.
+- Allow Electoral Officers to publish approved candidate lists.
+- Monitor election progress in real time.
+- Automatically close elections at the configured closing time.
+- Automatically count all valid votes.
+- Allow Electoral Officers to publish election results.
+- Archive completed elections for future reference.
+
+---
+
+### Administrative Rules
+
+The system shall enforce the following rules:
+
+- An Electoral Officer shall only manage elections assigned to their jurisdiction.
+- Elections shall not begin without a validated voter register.
+- Only approved candidates shall appear on the ballot.
+- Election schedules shall be finalized before voting begins.
+- Electoral Officers shall not modify candidate information after voting has commenced.
+- Electoral Officers shall not modify voter eligibility after the voter register has been validated.
+- Election results shall only be published after vote counting has been completed.
+- Archived elections shall remain read-only.
+
+---
+
+### Exception Handling
+
+The system shall appropriately respond to the following situations:
+
+- Invalid voter register import.
+- Duplicate student records in the voter register.
+- Candidate application does not satisfy eligibility requirements.
+- Attempt to approve candidates after voting has commenced.
+- Attempt to modify an active election.
+- Attempt to publish results before vote counting is complete.
+- System failure during voter register validation.
+- Election closure interrupted by unexpected system errors.
+
+In each case, the system shall display appropriate error messages, prevent unauthorized actions, and maintain data integrity.
+
+---
+
+### Election Integrity Requirements
+
+To preserve the integrity of election administration, the system shall:
+
+- Record every administrative action in the audit log.
+- Validate every imported voter register before activation.
+- Prevent unauthorized modification of election records.
+- Ensure only eligible students participate in elections.
+- Ensure only approved candidates appear on the ballot.
+- Prevent administrative actions that violate the election workflow.
+- Preserve complete historical records of every completed election.
+
+---
+
+## 9.4 Super Administrator Workflow
+
+### Purpose
+
+The Super Administrator Workflow defines the activities performed by the Super Administrator in managing the overall operation of the Student Online Voting Platform.
+
+The Super Administrator is responsible for system configuration, user administration, security oversight, institutional settings, and maintaining the integrity and availability of the platform.
+
+Unlike Electoral Officers who manage elections, the Super Administrator manages the system itself.
+
+---
+
+### Super Administrator Workflow Process
+
+The Super Administrator Workflow shall follow the sequence below:
+
+1. Super Administrator logs into the system.
+2. System authenticates the Super Administrator.
+3. Super Administrator accesses the system administration dashboard.
+4. Super Administrator manages institutional information.
+5. Super Administrator manages faculties, departments and programmes.
+6. Super Administrator creates and manages user accounts.
+7. Super Administrator assigns user roles and permissions.
+8. Super Administrator activates or suspends user accounts.
+9. Super Administrator monitors system activities.
+10. Super Administrator reviews audit logs.
+11. Super Administrator manages system announcements.
+12. Super Administrator manages notification templates.
+13. Super Administrator monitors system health.
+14. Super Administrator reviews security events.
+15. Super Administrator performs system maintenance when required.
+16. Super Administrator logs out of the system.
+
+---
+
+### Functional Requirements
+
+The system shall:
+
+- Allow the Super Administrator to manage institutional information.
+- Allow the Super Administrator to create and manage Electoral Officer accounts.
+- Allow the Super Administrator to create additional Super Administrator accounts where permitted.
+- Allow the Super Administrator to assign and revoke user roles.
+- Allow the Super Administrator to configure role permissions.
+- Allow the Super Administrator to activate, suspend or deactivate user accounts.
+- Allow the Super Administrator to manage departments, programmes and academic levels.
+- Allow the Super Administrator to publish system-wide announcements.
+- Allow the Super Administrator to manage notification templates.
+- Allow the Super Administrator to monitor system activity.
+- Allow the Super Administrator to review audit logs.
+- Allow the Super Administrator to monitor failed login attempts.
+- Allow the Super Administrator to review security alerts.
+- Allow the Super Administrator to perform system maintenance without compromising stored election data.
+
+---
+
+### Administrative Rules
+
+The system shall enforce the following rules:
+
+- Only Super Administrators shall access system administration functions.
+- Every administrative action shall be recorded in the audit log.
+- Suspended administrators shall not access administrative functions.
+- Deleted user accounts shall not be permanently removed if they contain historical election records.
+- Role permissions shall be validated before administrative actions are performed.
+- System configuration changes shall immediately affect future operations without compromising completed elections.
+- Election records shall remain immutable after archival.
+- The Super Administrator shall not modify anonymous ballot records.
+
+---
+
+### Exception Handling
+
+The system shall appropriately respond to the following situations:
+
+- Unauthorized access to administration functions.
+- Duplicate administrator accounts.
+- Invalid role assignment.
+- Attempt to delete protected system records.
+- Attempt to modify archived election records.
+- Failed authentication attempts.
+- System maintenance interruption.
+- Database connectivity failure during administrative operations.
+
+In each case, the system shall prevent unauthorized actions, preserve data integrity and display appropriate error messages without exposing sensitive system information.
+
+---
+
+### System Integrity Requirements
+
+To maintain platform integrity, the system shall:
+
+- Record every administrative activity within the audit log.
+- Maintain complete historical records of user administration.
+- Prevent unauthorized privilege escalation.
+- Preserve all election records during system maintenance.
+- Protect anonymous ballot records from administrative modification.
+- Monitor security-related events for suspicious activities.
+- Ensure that system configuration changes are traceable.
+- Maintain the availability of critical election services during normal operations.
+
+---
+
+## 9.5 Exception and Alternate Workflows
+
+### Purpose
+
+The Exception and Alternate Workflows define how the Student Online Voting Platform shall respond when normal operational processes are interrupted or exceptional situations occur.
+
+These workflows ensure that system reliability, election integrity, data consistency, and user experience are maintained under unexpected conditions.
+
+---
+
+### Authentication Exceptions
+
+The system shall appropriately respond to the following authentication-related situations:
+
+- Student enters incorrect login credentials.
+- Student account has not been activated.
+- Student account is suspended or disabled.
+- User exceeds the maximum permitted login attempts.
+- User session expires due to prolonged inactivity.
+- Password reset request is invalid or has expired.
+
+In each case, the system shall deny unauthorized access while providing clear and user-friendly feedback.
+
+---
+
+### Election Exceptions
+
+The system shall appropriately respond to the following election-related situations:
+
+- Election has not yet started.
+- Election has already ended.
+- Election has been cancelled.
+- Election has been suspended by an authorized administrator.
+- Student attempts to participate in an inactive election.
+- Student attempts to access an election for which they are not eligible.
+
+The system shall prevent participation in any election that does not satisfy the required ;?conditions.
+
+---
+
+### Voting Exceptions
+
+The system shall appropriately respond to the following voting-related situations:
+
+- Student attempts to vote more than once for the same position.
+- Student submits an incomplete ballot where completion is mandatory.
+- Student attempts to vote for an invalid candidate.
+- Student attempts to vote after election closure.
+- Student attempts to vote before election commencement.
+- Duplicate vote submission is detected.
+
+The system shall reject invalid vote submissions without compromising election integrity.
+
+---
+
+### Network and System Exceptions
+
+The system shall appropriately respond to the following operational situations:
+
+- Internet connection is interrupted during vote submission.
+- Browser refresh occurs during voting.
+- Unexpected browser closure occurs before vote submission.
+- Server becomes temporarily unavailable.
+- Database transaction fails.
+- System maintenance begins during normal operation.
+
+The system shall recover gracefully without creating duplicate votes or inconsistent election records.
+
+---
+
+### Administrative Exceptions
+
+The system shall appropriately respond to the following administrative situations:
+
+- Invalid voter register import.
+- Duplicate student records detected.
+- Candidate fails eligibility validation.
+- Unauthorized modification of election settings.
+- Attempt to publish results before vote counting is complete.
+- Attempt to modify archived election records.
+
+The system shall reject unauthorized administrative operations and maintain complete audit records.
+
+---
+
+### Data Integrity Requirements
+
+The system shall maintain data integrity by ensuring that:
+
+- Every successful vote is permanently recorded only once.
+- Duplicate vote submissions are rejected.
+- Failed transactions do not produce partial records.
+- Every administrative activity is logged.
+- Every security-related event is auditable.
+- Archived election data remains immutable.
+- Anonymous ballots cannot be linked to voter identities.
+- System failures do not compromise election integrity.
+
+---
+
+### Business Continuity Requirements
+
+The system shall support operational continuity by ensuring that:
+
+- Interrupted voting sessions may safely resume where appropriate.
+- Elections automatically continue after temporary network interruptions.
+- Critical election data is protected against accidental loss.
+- Election operations remain consistent throughout the election lifecycle.
+- Recovery procedures preserve all successfully completed transactions.
+
+---
+
+## 9.6 Workflow Validation
+
+### Purpose
+
+Workflow Validation establishes the rules that ensure every workflow within the Student Online Voting Platform operates correctly, securely, and consistently.
+
+It ensures that every activity follows the approved election process while preventing unauthorized actions, invalid transitions, and data inconsistencies.
+
+---
+
+### Workflow Validation Principles
+
+The system shall enforce the following workflow validation principles:
+
+- Every workflow shall begin with successful user authentication.
+- Every user action shall be validated against the user's assigned role and permissions.
+- Every workflow shall follow the approved sequence of operations.
+- Unauthorized workflow transitions shall be prevented.
+- Every completed operation shall be recorded where audit logging is required.
+- Every workflow shall preserve data consistency and election integrity.
+
+---
+
+### Workflow State Validation
+
+The system shall validate the current workflow state before allowing any operation.
+
+The system shall ensure that:
+
+- Candidate approval cannot occur after voting has commenced.
+- Student account activation cannot occur after the election has opened.
+- Voting shall only be permitted while the election is in the **Open** state.
+- Vote counting shall only begin after the election has closed.
+- Results shall only be published after vote counting has been completed.
+- Archived elections shall remain read-only.
+
+If the current workflow state does not permit an operation, the system shall reject the request and notify the user accordingly.
+
+---
+
+### Election Integrity Validation
+
+To maintain election integrity, the system shall ensure that:
+
+- Every eligible student votes only once for each elective position.
+- Duplicate vote submissions are rejected.
+- Every accepted vote is permanently recorded.
+- Anonymous ballots remain unlinkable to voter identities.
+- Every administrative activity is traceable through audit logs.
+- Election data remains protected against unauthorized modification.
+- Published election results cannot be altered.
+- Archived election records remain immutable.
+
+---
+
+### Security Validation
+
+The system shall validate every sensitive operation by ensuring that:
+
+- User authentication is verified.
+- User authorization is confirmed.
+- Role permissions are enforced.
+- Invalid requests are rejected.
+- Failed operations do not corrupt stored data.
+- Security-related events are recorded for auditing.
+
+---
+
+### Workflow Completion Criteria
+
+A workflow shall only be considered successfully completed when:
+
+- All required validation rules have passed.
+- Every mandatory operation has been successfully executed.
+- Required audit records have been created.
+- Database transactions have completed successfully.
+- No data integrity violations have occurred.
+- System consistency has been preserved.
+
+---
+
+### Workflow Reliability Requirements
+
+The system shall maintain workflow reliability by ensuring that:
+
+- Unexpected interruptions do not create duplicate transactions.
+- Failed operations may be safely retried where appropriate.
+- Partially completed transactions are rolled back.
+- Concurrent operations do not compromise election integrity.
+- System failures do not result in inconsistent election records.

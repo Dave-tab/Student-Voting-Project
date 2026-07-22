@@ -34,7 +34,7 @@ The Software Requirements Specification now serves as the foundation for all fut
 
 # Sprint 2 – User Roles, Permissions & Business Rules
 
-**Date:** _(Enter today's date)_
+**Date:** 22nd July 2026
 
 ## Sprint Goal
 
@@ -134,3 +134,127 @@ These documents provide the foundation for database engineering, Row Level Secur
 
 ---
 
+# Sprint 3 – System Workflows
+
+**Date:** 22nd July 2026
+
+## Sprint Goal
+
+Define the complete operational workflows governing the Student Online Voting Platform, ensuring that every election follows a secure, transparent, consistent, and auditable process from election planning to election archiving.
+
+---
+
+## Work Completed
+
+### Part A – Overall System Workflow
+
+Completed the definition of the complete election lifecycle covering:
+
+- Election Planning
+- Election Creation
+- Election Voter Register Import
+- Register Validation
+- Student Account Activation
+- Candidate Nomination
+- Candidate Review and Approval
+- Election Preparation
+- Election Opening
+- Student Voting
+- Election Closure
+- Vote Counting
+- Result Publication
+- Election Archiving
+
+Defined the functional requirements and election integrity principles governing the overall workflow.
+
+---
+
+### Part B – Student Workflow
+
+Designed the complete workflow for student interaction with the platform, including:
+
+- Authentication
+- Dashboard Access
+- Election Participation
+- Ballot Submission
+- Vote Confirmation
+- Logout
+
+Defined participation rules, voting eligibility requirements, and workflow validation for student activities.
+
+---
+
+### Part C – Electoral Officer Workflow
+
+Designed the administrative workflow for Electoral Officers covering:
+
+- Election Creation
+- Election Configuration
+- Voter Register Import
+- Register Validation
+- Student Account Activation
+- Candidate Review and Approval
+- Election Monitoring
+- Result Publication
+- Election Archiving
+
+Defined administrative rules, functional requirements, and exception handling procedures.
+
+---
+
+### Part D – Super Administrator Workflow
+
+Defined the responsibilities of the Super Administrator, including:
+
+- Institutional Management
+- User Management
+- Role and Permission Management
+- System Configuration
+- Audit Log Review
+- Security Monitoring
+- Notification Management
+- System Maintenance
+
+Established administrative integrity requirements for system-wide operations.
+
+---
+
+### Part E – Exception and Alternate Workflows
+
+Documented system behavior during exceptional situations, including:
+
+- Authentication failures
+- Election exceptions
+- Voting exceptions
+- Administrative exceptions
+- Network interruptions
+- Database failures
+- Business continuity procedures
+- Data integrity protection
+
+These workflows ensure the platform maintains consistency and reliability under abnormal operating conditions.
+
+---
+
+### Part F – Workflow Validation
+
+Established workflow validation rules governing:
+
+- Workflow sequencing
+- Workflow state transitions
+- Election integrity validation
+- Security validation
+- Workflow completion criteria
+- Workflow reliability
+
+These validation rules ensure that every workflow follows the approved election lifecycle while preventing invalid or unauthorized operations.
+
+---
+
+## Key Design Decisions
+
+- Defined a complete end-to-end election workflow.
+- Adopted workflow state validation before every critical operation.
+- Introduced exception and alternate workflows for system resilience.
+- Enforced workflow validation to prevent invalid state transitions.
+- Ensured one eligible
