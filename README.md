@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
@@ -73,3 +74,7 @@ export default defineConfig([
 ])
 
 ```
+=======
+# Student-Voting-Project
+A secure campus electronic voting system built with React, Tailwind CSS, and Supabase
+>>>>>>> 8988c63b9c78c3061d8e6fd8a4e2984ee8bb6993
