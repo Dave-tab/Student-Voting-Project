@@ -410,3 +410,156 @@ Sprint 4 successfully established the complete security architecture for the Stu
 The security requirements defined in this sprint will serve as the foundation for implementing secure authentication, authorization, database protection, Row Level Security (RLS), audit logging, and application security throughout subsequent development milestones.
 
 ---
+
+# Sprint 5 – Software Architecture & Technical Design
+
+**Date:** 23rd July 2026
+
+## Sprint Goal
+
+Design the complete software architecture for the Student Online Voting Platform by defining the technical architecture, technology stack, frontend and backend architecture, system components, project folder structure, and engineering standards that will guide implementation throughout the project lifecycle.
+
+---
+
+## Work Completed
+
+### Part A – System Architecture Overview
+
+Defined the overall software architecture of the platform.
+
+Documented:
+
+- Architecture purpose
+- Architectural goals
+- High-level architecture
+- Architectural principles
+- System layers
+- Expected architectural benefits
+
+Established the architecture-first approach that will guide subsequent development phases.
+
+---
+
+### Part B – Technology Stack
+
+Documented the complete technology stack for the platform.
+
+Defined:
+
+- Frontend technologies
+- Backend technologies
+- Development tools
+- Supporting libraries
+- Technology selection principles
+- Technology compatibility
+
+Added a Technology Selection Justification table explaining the purpose and rationale behind each major technology adopted in the project.
+
+---
+
+### Part C – Frontend Architecture
+
+Designed the frontend architecture.
+
+Defined:
+
+- Frontend objectives
+- Component-Based Architecture
+- Application layouts
+- Routing architecture
+- Component architecture
+- State management
+- Form management
+- Responsive design
+- Frontend security
+- Frontend design principles
+
+Established the architectural foundation for a scalable and maintainable React application.
+
+---
+
+### Part D – Backend Architecture
+
+Designed the backend architecture.
+
+Defined:
+
+- Backend objectives
+- Backend-as-a-Service (BaaS) architecture
+- Authentication service
+- Authorization service
+- Business logic layer
+- Database communication
+- API communication
+- Backend security
+- Backend design principles
+
+Prepared the system for secure integration with Supabase and PostgreSQL.
+
+---
+
+### Part E – System Components
+
+Identified and documented the major system components.
+
+Completed the architecture for:
+
+- Authentication Component
+- Student Management Component
+- Election Management Component
+- Candidate Management Component
+- Position Management Component
+- Voting Component
+- Results Component
+- Reporting Component
+- Audit and Monitoring Component
+
+Defined component interactions and component design principles.
+
+---
+
+### Part F – Project Folder Structure
+
+Designed the standardized project directory structure.
+
+Documented:
+
+- Root project structure
+- Documentation directory
+- Database directory
+- Public directory
+- Source directory
+- Source subdirectories
+- Folder responsibilities
+- Folder structure principles
+
+Established a consistent organization that supports maintainability and future scalability.
+
+---
+
+### Part G – Architecture Principles & Engineering Standards
+
+Defined the engineering standards governing the project.
+
+Documented:
+
+- Software engineering principles
+- Security principles
+- Database design principles
+- User interface principles
+- Coding standards
+- Documentation standards
+- Version control standards
+- Quality assurance principles
+- Maintainability principles
+- Scalability principles
+- Engineering philosophy
+
+Confirmed the Architecture-First development approach for the project.
+
+---
+
+## Key Design Decisions
+
+- Adopted a layered software architecture.
+- Selected a modern technology stack centered on React, Type

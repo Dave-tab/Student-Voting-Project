@@ -1,0 +1,1236 @@
+# Student Online Voting Platform
+
+# Software Architecture
+
+---
+
+# Sprint 5 – System Architecture & Technical Design
+
+## Part A – System Architecture Overview
+
+### Purpose
+
+The Software Architecture defines the overall technical structure of the Student Online Voting Platform.
+
+It describes how the various components of the system are organized, how they interact with one another, and the architectural principles that guide the implementation of a secure, scalable, maintainable, and reliable web-based election platform.
+
+This document serves as the technical blueprint that guides development throughout the project lifecycle.
+
+---
+
+### Architectural Goals
+
+The software architecture shall be designed to achieve the following objectives:
+
+- Maintain a modular and well-organized system.
+- Support secure online elections.
+- Ensure scalability for future institutional growth.
+- Promote maintainability through clear separation of responsibilities.
+- Improve system reliability and fault tolerance.
+- Support responsive user interfaces across multiple devices.
+- Enable secure integration with backend services.
+- Provide a strong foundation for future feature expansion.
+
+---
+
+### High-Level Architecture
+
+The Student Online Voting Platform shall adopt a layered architecture consisting of the following major layers:
+
+- Presentation Layer
+- Application Layer
+- Data Access Layer
+- Database Layer
+- External Service Layer
+
+Each layer shall perform clearly defined responsibilities while interacting with adjacent layers through well-defined interfaces.
+
+This layered approach reduces coupling, improves maintainability, and simplifies future enhancements.
+
+---
+
+### Architectural Principles
+
+The architecture shall follow the following engineering principles:
+
+- Separation of Concerns (SoC)
+- Single Responsibility Principle (SRP)
+- Modular Design
+- Reusability
+- Scalability
+- Maintainability
+- Security by Design
+- Least Privilege
+- Defense in Depth
+- Fail Securely
+
+These principles shall guide all architectural and implementation decisions throughout the project.
+
+---
+
+### System Layers
+
+The Student Online Voting Platform shall consist of the following logical layers:
+
+#### Presentation Layer
+
+Responsible for:
+
+- User interface
+- User interaction
+- Form validation
+- Navigation
+- User experience
+
+---
+
+#### Application Layer
+
+Responsible for:
+
+- Business logic
+- Authentication workflows
+- Authorization
+- Election workflows
+- Vote processing
+- System coordination
+
+---
+
+#### Data Access Layer
+
+Responsible for:
+
+- Database communication
+- Data validation
+- Query execution
+- Transaction management
+
+---
+
+#### Database Layer
+
+Responsible for:
+
+- Persistent data storage
+- Data integrity
+- Constraints
+- Relationships
+- Security policies
+- Backup support
+
+---
+
+#### External Service Layer
+
+Responsible for integration with external services including:
+
+- Supabase Authentication
+- Email services
+- File storage
+- Future notification services
+
+---
+
+### Expected Benefits
+
+This architecture provides:
+
+- High maintainability.
+- Improved scalability.
+- Enhanced security.
+- Easier testing.
+- Clear separation of responsibilities.
+- Simplified future enhancements.
+- Better developer collaboration.
+
+---
+
+## Part B – Technology Stack
+
+### Purpose
+
+The Student Online Voting Platform shall utilize a modern, secure, and scalable technology stack that supports maintainability, performance, developer productivity, and long-term sustainability.
+
+Each selected technology has been evaluated based on compatibility, community support, ease of maintenance, security, scalability, and suitability for institutional deployment.
+
+---
+
+### Frontend Technologies
+
+#### React
+
+React shall serve as the primary frontend library.
+
+Responsibilities include:
+
+- Building reusable user interface components.
+- Rendering dynamic user interfaces.
+- Managing component-based application architecture.
+- Supporting efficient updates through virtual DOM rendering.
+
+---
+
+#### TypeScript
+
+TypeScript shall be used throughout the frontend application.
+
+Responsibilities include:
+
+- Static type checking.
+- Improved code reliability.
+- Better developer experience.
+- Early detection of programming errors.
+- Improved code maintainability.
+
+---
+
+#### Vite
+
+Vite shall serve as the frontend build tool.
+
+Responsibilities include:
+
+- Fast development server.
+- Optimized production builds.
+- Module bundling.
+- Development efficiency.
+- Hot Module Replacement (HMR).
+
+---
+
+#### Tailwind CSS
+
+Tailwind CSS shall provide the application's styling framework.
+
+Responsibilities include:
+
+- Utility-first styling.
+- Responsive layouts.
+- Consistent design system.
+- Faster UI development.
+- Reduced custom CSS complexity.
+
+---
+
+### Backend Technologies
+
+#### Supabase
+
+Supabase shall provide the Backend-as-a-Service (BaaS) platform.
+
+Responsibilities include:
+
+- User authentication.
+- Database management.
+- Row Level Security (RLS).
+- API generation.
+- Secure backend services.
+
+---
+
+#### PostgreSQL
+
+PostgreSQL shall serve as the primary relational database.
+
+Responsibilities include:
+
+- Persistent data storage.
+- Relationship management.
+- Constraints.
+- Indexes.
+- Stored procedures.
+- Triggers.
+- Transaction management.
+
+---
+
+### Development Tools
+
+#### Git
+
+Git shall provide version control throughout the project lifecycle.
+
+Responsibilities include:
+
+- Source code versioning.
+- Change tracking.
+- Branch management.
+- Team collaboration.
+- Release management.
+
+---
+
+#### GitHub
+
+GitHub shall host the project repository.
+
+Responsibilities include:
+
+- Remote repository management.
+- Backup of project source code.
+- Collaboration.
+- Documentation management.
+- Project history.
+
+---
+
+#### Visual Studio Code
+
+Visual Studio Code shall serve as the primary development environment.
+
+Responsibilities include:
+
+- Source code editing.
+- Extension support.
+- Integrated debugging.
+- Source control integration.
+- Developer productivity.
+
+---
+
+### Supporting Libraries
+
+The application shall utilize supporting libraries to improve reliability and development efficiency.
+
+These include:
+
+#### React Router
+
+Used for:
+
+- Client-side routing.
+- Protected routes.
+- Navigation management.
+
+---
+
+#### React Hook Form
+
+Used for:
+
+- Form management.
+- Input validation.
+- Performance optimization.
+
+---
+
+#### Zod
+
+Used for:
+
+- Schema validation.
+- Type-safe form validation.
+- Runtime data validation.
+
+---
+
+#### clsx
+
+Used for:
+
+- Conditional CSS class composition.
+- Cleaner component styling.
+
+---
+
+#### React Hot Toast
+
+Used for:
+
+- User notifications.
+- Success messages.
+- Error messages.
+- Informational alerts.
+
+---
+
+### Technology Selection Principles
+
+The selected technology stack satisfies the following architectural objectives:
+
+- Security
+- Scalability
+- Maintainability
+- Performance
+- Reliability
+- Developer productivity
+- Strong community support
+- Long-term sustainability
+- Cross-platform compatibility
+
+---
+
+### Technology Compatibility
+
+All selected technologies shall be compatible with one another and support the project's architectural goals.
+
+The technology stack shall allow future integration of additional services and features without requiring significant architectural changes.
+
+The architecture shall remain modular to simplify future upgrades and maintenance.
+
+---
+
+### Technology Selection Justification
+
+The technologies selected for the Student Online Voting Platform were evaluated based on security, scalability, maintainability, performance, community support, compatibility, and long-term sustainability.
+
+The following table summarizes the justification for each major technology used in the project.
+
+| Technology | Purpose | Justification |
+|------------|---------|---------------|
+| **React** | Frontend User Interface | Provides a component-based architecture that promotes code reusability, maintainability, and efficient rendering of dynamic user interfaces. |
+| **TypeScript** | Programming Language | Improves code quality through static type checking, reduces runtime errors, and enhances maintainability for large-scale applications. |
+| **Vite** | Build Tool | Offers a fast development server, Hot Module Replacement (HMR), and optimized production builds, improving developer productivity. |
+| **Tailwind CSS** | CSS Framework | Enables rapid development of responsive and consistent user interfaces using a utility-first approach while minimizing custom CSS. |
+| **Supabase** | Backend-as-a-Service (BaaS) | Provides authentication, PostgreSQL database services, automatic API generation, Row Level Security (RLS), and storage in a unified platform. |
+| **PostgreSQL** | Relational Database | Supports complex relationships, strong data integrity, advanced indexing, transactions, triggers, functions, and enterprise-grade security. |
+| **React Router** | Routing Library | Enables client-side navigation and secure route protection for authenticated users. |
+| **React Hook Form** | Form Management | Simplifies form handling with high performance and minimal re-rendering while supporting validation. |
+| **Zod** | Schema Validation | Provides type-safe validation for user input, ensuring consistency between frontend and backend data models. |
+| **clsx** | Utility Library | Simplifies conditional application of CSS classes, improving readability and maintainability of UI components. |
+| **React Hot Toast** | Notification Library | Provides user-friendly feedback through responsive success, warning, and error notifications. |
+| **Git** | Version Control | Tracks project history, supports collaboration, and enables safe rollback of changes when necessary. |
+| **GitHub** | Repository Hosting | Provides remote source code management, project backup, collaboration, documentation, and version history. |
+| **Visual Studio Code** | Development Environment | Offers an extensible, lightweight, and productive coding environment with integrated debugging and source control support. |
+
+---
+
+### Technology Evaluation Criteria
+
+The technology stack was selected based on the following evaluation criteria:
+
+- Security
+- Scalability
+- Maintainability
+- Performance
+- Reliability
+- Compatibility
+- Ease of Development
+- Community Support
+- Long-Term Sustainability
+- Industry Adoption
+
+Each selected technology satisfies these criteria and contributes to the development of a secure, maintainable, and production-ready Student Online Voting Platform.
+
+---
+
+## Part C – Frontend Architecture
+
+### Purpose
+
+The frontend architecture defines how the user interface of the Student Online Voting Platform is organized, structured, and maintained.
+
+The architecture shall promote modularity, reusability, maintainability, responsiveness, and scalability while providing a secure and user-friendly experience across multiple devices.
+
+---
+
+### Frontend Architecture Objectives
+
+The frontend architecture shall be designed to:
+
+- Provide a responsive user interface.
+- Promote reusable UI components.
+- Simplify application maintenance.
+- Ensure consistent user experience.
+- Improve code organization.
+- Support future feature expansion.
+- Integrate securely with backend services.
+
+---
+
+### Frontend Architectural Style
+
+The frontend application shall adopt a Component-Based Architecture.
+
+The architecture shall ensure that:
+
+- each user interface element is implemented as an independent component.
+- components are reusable throughout the application.
+- components remain loosely coupled.
+- business logic is separated from presentation logic.
+- user interface updates remain predictable and maintainable.
+
+---
+
+### Application Layout Structure
+
+The frontend shall be organized into logical layouts based on user roles and application modules.
+
+The application shall provide dedicated layouts for:
+
+- Public Pages
+- Student Dashboard
+- Electoral Officer Dashboard
+- Super Administrator Dashboard
+- Authentication Pages
+
+Each layout shall maintain a consistent navigation structure and user experience.
+
+---
+
+### Routing Architecture
+
+The application shall implement client-side routing.
+
+The routing architecture shall ensure that:
+
+- navigation occurs without full page reloads.
+- protected routes require authentication.
+- unauthorized users are denied access to restricted pages.
+- users are redirected according to their assigned roles.
+- invalid routes display an appropriate error page.
+
+---
+
+### Component Architecture
+
+The frontend shall consist of reusable and independent components.
+
+Examples include:
+
+- Buttons
+- Input Fields
+- Forms
+- Cards
+- Tables
+- Navigation Bars
+- Sidebars
+- Dialog Boxes
+- Modal Windows
+- Notification Components
+- Loading Indicators
+- Pagination Components
+
+Each component shall have a clearly defined responsibility and shall be reusable throughout the application.
+
+---
+
+### State Management
+
+The frontend architecture shall manage application state efficiently.
+
+The system shall separate:
+
+- Global application state.
+- Authentication state.
+- User interface state.
+- Form state.
+- Server data.
+
+State management shall minimize unnecessary component rendering and improve application performance.
+
+---
+
+### Form Management
+
+The frontend shall provide a standardized approach for handling user input.
+
+The architecture shall ensure that:
+
+- forms are validated before submission.
+- invalid input is rejected.
+- validation errors are clearly communicated.
+- user input is preserved where appropriate.
+- submitted data is validated before transmission to the backend.
+
+---
+
+### Responsive Design
+
+The user interface shall support multiple screen sizes.
+
+The frontend shall provide an optimized experience for:
+
+- Mobile devices.
+- Tablets.
+- Laptop computers.
+- Desktop computers.
+
+Responsive layouts shall ensure usability across all supported devices.
+
+---
+
+### Frontend Security
+
+The frontend architecture shall contribute to application security by ensuring that:
+
+- sensitive information is not exposed within the user interface.
+- protected pages require authentication.
+- unauthorized actions are prevented through user interface controls.
+- user input is validated before submission.
+- security complements backend authorization rather than replacing it.
+
+---
+
+### Frontend Design Principles
+
+The frontend architecture shall adhere to the following principles:
+
+- Component Reusability
+- Separation of Concerns
+- Accessibility
+- Responsive Design
+- Consistency
+- Maintainability
+- Simplicity
+- Performance Optimization
+
+---
+
+## Part D – Backend Architecture
+
+### Purpose
+
+The backend architecture defines how the Student Online Voting Platform processes business logic, manages authentication and authorization, communicates with the database, and enforces the security rules established in the Software Requirements Specification.
+
+The backend architecture shall ensure that all server-side operations are secure, reliable, scalable, and maintainable while preserving the integrity of election data.
+
+---
+
+### Backend Architecture Objectives
+
+The backend architecture shall be designed to:
+
+- Provide secure authentication and authorization.
+- Enforce business rules consistently.
+- Protect election data from unauthorized access.
+- Support scalable database operations.
+- Maintain high system reliability.
+- Provide secure communication between the frontend and the database.
+- Ensure all critical operations are auditable.
+
+---
+
+### Backend Architectural Style
+
+The Student Online Voting Platform shall adopt a Backend-as-a-Service (BaaS) architecture using Supabase.
+
+The backend shall provide:
+
+- User Authentication
+- Authorization
+- Database Services
+- Row Level Security (RLS)
+- Secure API Access
+- File Storage (where applicable)
+
+Business rules shall be enforced through a combination of application logic and database-level security controls.
+
+---
+
+### Authentication Service
+
+The backend shall provide secure authentication services.
+
+Responsibilities include:
+
+- User account verification.
+- Secure login.
+- Password management.
+- Session validation.
+- Password reset.
+- Account activation.
+- Session termination.
+
+Authentication services shall ensure that only verified users can access protected resources.
+
+---
+
+### Authorization Service
+
+The backend shall enforce authorization based on approved user roles and permissions.
+
+The authorization service shall ensure that:
+
+- users access only resources permitted by their assigned roles.
+- unauthorized requests are rejected.
+- permission checks occur before protected operations are executed.
+- administrative privileges are restricted to authorized personnel.
+
+---
+
+### Business Logic Layer
+
+The backend shall implement business rules governing election operations.
+
+Responsibilities include:
+
+- Election lifecycle validation.
+- Candidate eligibility verification.
+- Student eligibility verification.
+- Voting validation.
+- Duplicate vote prevention.
+- Result publication validation.
+- Audit log generation.
+
+Business rules shall be enforced consistently across the application.
+
+---
+
+### Database Communication
+
+The backend shall communicate securely with the PostgreSQL database.
+
+The communication layer shall ensure that:
+
+- database operations are validated.
+- transactions maintain data integrity.
+- failed transactions are safely handled.
+- database errors are securely reported.
+- unauthorized database access is prevented.
+
+---
+
+### API Communication
+
+The backend shall expose secure APIs for frontend communication.
+
+The API architecture shall ensure that:
+
+- authenticated requests are validated.
+- responses follow consistent formats.
+- unauthorized requests are rejected.
+- sensitive information is not exposed.
+- communication occurs over secure channels.
+
+---
+
+### Backend Security
+
+The backend architecture shall ensure that:
+
+- business rules cannot be bypassed.
+- unauthorized database operations are prevented.
+- sensitive information remains protected.
+- authentication tokens are validated.
+- security policies remain consistently enforced.
+- all critical operations are recorded in audit logs.
+
+---
+
+### Backend Design Principles
+
+The backend architecture shall follow the following principles:
+
+- Security by Design
+- Defense in Depth
+- Least Privilege
+- Separation of Concerns
+- Reliability
+- Scalability
+- Maintainability
+- Data Integrity
+- Fault Tolerance
+
+---
+
+## Part E – System Components
+
+### Purpose
+
+The Student Online Voting Platform shall be composed of independent but interconnected system components.
+
+Each component shall perform a specific responsibility while collaborating with other components through clearly defined interfaces.
+
+This modular architecture improves maintainability, scalability, security, and future system expansion.
+
+---
+
+### Authentication Component
+
+The Authentication Component shall manage user identity and access.
+
+Responsibilities include:
+
+- User authentication.
+- Account activation.
+- Secure login.
+- Password management.
+- Session management.
+- Logout.
+- Password reset.
+
+The Authentication Component shall ensure that only verified users access protected resources.
+
+---
+
+### Student Management Component
+
+The Student Management Component shall manage student information throughout the election lifecycle.
+
+Responsibilities include:
+
+- Student registration.
+- Student account activation.
+- Student profile management.
+- Student eligibility verification.
+- Election voter register validation.
+
+The component shall ensure that only eligible students participate in elections.
+
+---
+
+### Election Management Component
+
+The Election Management Component shall manage election administration.
+
+Responsibilities include:
+
+- Election creation.
+- Election configuration.
+- Election scheduling.
+- Election publication.
+- Election suspension.
+- Election closure.
+- Election archival.
+
+The component shall ensure that elections progress according to the approved workflow.
+
+---
+
+### Candidate Management Component
+
+The Candidate Management Component shall manage candidate participation.
+
+Responsibilities include:
+
+- Candidate nomination.
+- Candidate verification.
+- Candidate approval.
+- Candidate rejection.
+- Candidate profile management.
+
+Only approved candidates shall appear on election ballots.
+
+---
+
+### Position Management Component
+
+The Position Management Component shall manage elective positions.
+
+Responsibilities include:
+
+- Position creation.
+- Position modification.
+- Position activation.
+- Position deactivation.
+- Position ordering.
+
+Each election shall contain only approved positions.
+
+---
+
+### Voting Component
+
+The Voting Component shall manage ballot submission.
+
+Responsibilities include:
+
+- Ballot generation.
+- Eligibility verification.
+- Vote validation.
+- Duplicate vote prevention.
+- Anonymous vote recording.
+- Vote confirmation.
+
+The component shall ensure that each eligible student casts only one valid vote per position.
+
+---
+
+### Results Component
+
+The Results Component shall manage vote counting and result publication.
+
+Responsibilities include:
+
+- Vote counting.
+- Result computation.
+- Winner determination.
+- Result publication.
+- Election statistics.
+- Historical result retrieval.
+
+The Results Component shall maintain accuracy, transparency, and integrity.
+
+---
+
+### Reporting Component
+
+The Reporting Component shall generate operational and administrative reports.
+
+Responsibilities include:
+
+- Election reports.
+- Voter turnout reports.
+- Candidate reports.
+- Audit reports.
+- Administrative summaries.
+
+Reports shall be accessible only to authorized users.
+
+---
+
+### Audit and Monitoring Component
+
+The Audit and Monitoring Component shall record and monitor significant system activities.
+
+Responsibilities include:
+
+- Authentication logging.
+- Administrative logging.
+- Voting activity logging.
+- Security event monitoring.
+- System event monitoring.
+- Audit report generation.
+
+The component shall preserve accountability while maintaining ballot secrecy.
+
+---
+
+### Component Interaction
+
+All system components shall communicate through secure and well-defined interfaces.
+
+The architecture shall ensure that:
+
+- components remain loosely coupled.
+- responsibilities remain clearly separated.
+- business rules are consistently enforced.
+- security policies apply across all components.
+- components support future expansion without significant architectural changes.
+
+---
+
+### Component Design Principles
+
+All system components shall adhere to the following principles:
+
+- Single Responsibility Principle.
+- Separation of Concerns.
+- High Cohesion.
+- Low Coupling.
+- Reusability.
+- Scalability.
+- Maintainability.
+- Security by Design.
+
+---
+
+## Part F – Project Folder Structure
+
+### Purpose
+
+The Student Online Voting Platform shall adopt a standardized project folder structure to promote consistency, maintainability, scalability, and ease of collaboration.
+
+Each directory shall have a clearly defined responsibility to ensure that project resources remain organized throughout the software development lifecycle.
+
+---
+
+### Root Project Structure
+
+The project shall be organized using the following high-level directory structure:
+
+```text
+student-voting-project/
+│
+├── docs/
+├── database/
+├── public/
+├── src/
+├── .env
+├── .env.example
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── vite.config.ts
+├── tailwind.config.js
+├── postcss.config.js
+└── README.md
+```
+
+---
+
+### Documentation Directory
+
+The `docs/` directory shall contain all project documentation.
+
+It shall include:
+
+- Software Requirements Specification
+- Software Architecture
+- Database Architecture
+- API Specification
+- UI Design
+- Security Documentation
+- Testing Documentation
+- Deployment Guide
+- Development Journal
+
+---
+
+### Database Directory
+
+The `database/` directory shall contain database-related resources.
+
+It shall include:
+
+- SQL scripts
+- Database migration files
+- Seed data
+- Database documentation
+
+---
+
+### Public Directory
+
+The `public/` directory shall contain publicly accessible static assets.
+
+Examples include:
+
+- Images
+- Icons
+- Favicon
+- Static documents
+
+---
+
+### Source Directory
+
+The `src/` directory shall contain the application's source code.
+
+It shall serve as the primary workspace for frontend development.
+
+---
+
+### Source Directory Structure
+
+The `src/` directory shall be organized as follows:
+
+```text
+src/
+│
+├── assets/
+├── components/
+├── contexts/
+├── hooks/
+├── layouts/
+├── lib/
+├── pages/
+├── routes/
+├── services/
+├── styles/
+├── types/
+├── utils/
+├── App.tsx
+└── main.tsx
+```
+
+---
+
+### Assets Directory
+
+The `assets/` directory shall contain application resources such as:
+
+- Images
+- Logos
+- SVG files
+- Fonts
+- Illustrations
+
+---
+
+### Components Directory
+
+The `components/` directory shall contain reusable user interface components.
+
+Examples include:
+
+- Buttons
+- Cards
+- Forms
+- Tables
+- Dialogs
+- Navigation Components
+- Notification Components
+
+Components shall be designed for reuse across multiple modules.
+
+---
+
+### Contexts Directory
+
+The `contexts/` directory shall contain React Context providers used for managing shared application state.
+
+Examples include:
+
+- Authentication Context
+- Theme Context
+- User Context
+
+---
+
+### Hooks Directory
+
+The `hooks/` directory shall contain reusable custom React Hooks.
+
+These hooks shall encapsulate reusable application
+
+---
+
+## Part G – Architecture Principles & Engineering Standards
+
+### Purpose
+
+The Student Online Voting Platform shall be developed in accordance with established software engineering principles and architectural best practices.
+
+These principles shall guide all design, development, testing, and maintenance activities to ensure the system remains secure, maintainable, scalable, reliable, and suitable for production use.
+
+---
+
+### Software Engineering Principles
+
+The architecture shall adhere to the following software engineering principles:
+
+- Separation of Concerns (SoC)
+- Single Responsibility Principle (SRP)
+- Don't Repeat Yourself (DRY)
+- Keep It Simple (KISS)
+- High Cohesion
+- Low Coupling
+- Modularity
+- Reusability
+- Maintainability
+- Scalability
+
+These principles shall guide all implementation decisions throughout the project lifecycle.
+
+---
+
+### Security Principles
+
+Security shall be integrated into every layer of the application.
+
+The architecture shall enforce the following principles:
+
+- Security by Design
+- Defense in Depth
+- Principle of Least Privilege (PoLP)
+- Secure Authentication
+- Secure Authorization
+- Data Confidentiality
+- Data Integrity
+- Accountability
+- Fail Securely
+
+Security shall never rely solely on the frontend application.
+
+---
+
+### Database Design Principles
+
+The database architecture shall follow established relational database principles.
+
+The system shall ensure:
+
+- Data normalization where appropriate.
+- Referential integrity.
+- Proper use of primary and foreign keys.
+- Database constraints.
+- Transaction consistency.
+- Secure access through Row Level Security (RLS).
+- Reliable backup and recovery strategies.
+
+Database design shall prioritize integrity, consistency, and security.
+
+---
+
+### User Interface Principles
+
+The user interface shall be designed to provide a consistent and accessible user experience.
+
+The interface shall:
+
+- Maintain visual consistency.
+- Support responsive design.
+- Provide intuitive navigation.
+- Display meaningful error messages.
+- Minimize unnecessary user actions.
+- Support accessibility best practices.
+
+---
+
+### Coding Standards
+
+The development team shall follow consistent coding standards.
+
+These include:
+
+- Meaningful naming conventions.
+- Consistent code formatting.
+- Modular implementation.
+- Clear function responsibilities.
+- Reusable components.
+- Type-safe development using TypeScript.
+- Proper code documentation where necessary.
+
+All source code shall remain readable and maintainable.
+
+---
+
+### Documentation Standards
+
+Project documentation shall remain accurate, consistent, and up to date.
+
+Documentation shall:
+
+- Reflect implementation decisions.
+- Follow the approved project structure.
+- Use consistent terminology.
+- Be reviewed before major implementation phases.
+- Be updated whenever significant architectural changes occur.
+
+---
+
+### Version Control Standards
+
+The project shall use Git for version control and GitHub as the remote repository.
+
+The development workflow shall ensure:
+
+- Frequent commits with meaningful commit messages.
+- One logical change per commit where practical.
+- GitHub synchronization after each completed sprint.
+- A clean working tree before beginning a new sprint.
+- Preservation of complete project history.
+
+---
+
+### Quality Assurance Principles
+
+Quality shall be maintained throughout the development lifecycle.
+
+The project shall include:
+
+- Continuous testing.
+- Validation of business rules.
+- Security verification.
+- Documentation review.
+- Manual feature testing.
+- Code review before major releases.
+
+Quality assurance shall be integrated into every milestone.
+
+---
+
+### Maintainability Principles
+
+The architecture shall support long-term maintenance by ensuring:
+
+- Clear separation of modules.
+- Minimal code duplication.
+- Consistent project organization.
+- Easy feature enhancement.
+- Straightforward debugging.
+- Simplified future ref
