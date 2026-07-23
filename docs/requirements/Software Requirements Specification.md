@@ -1947,3 +1947,783 @@ The system shall maintain workflow reliability by ensuring that:
 - Partially completed transactions are rolled back.
 - Concurrent operations do not compromise election integrity.
 - System failures do not result in inconsistent election records.
+
+---
+
+# 10. Security Architecture
+
+## 10.1 Security Principles and Security Objectives
+
+### Purpose
+
+The Student Online Voting Platform shall implement a comprehensive security architecture that protects election data, user information, and system resources throughout the entire election lifecycle.
+
+The security architecture shall ensure that elections are conducted in a secure, transparent, reliable, and auditable environment while preserving voter privacy and maintaining public confidence in the integrity of election results.
+
+---
+
+### Security Objectives
+
+The primary security objectives of the Student Online Voting Platform shall be to:
+
+- Protect sensitive user information from unauthorized disclosure.
+- Preserve the integrity of election data throughout its lifecycle.
+- Ensure that authorized users can access the system whenever required.
+- Prevent unauthorized access to protected system resources.
+- Preserve voter anonymity during and after elections.
+- Protect election results from unauthorized modification.
+- Ensure accountability through comprehensive audit logging.
+- Maintain system reliability during election periods.
+- Detect and respond to suspicious activities.
+- Support secure recovery from unexpected failures.
+
+---
+
+### Confidentiality
+
+The system shall preserve confidentiality by ensuring that:
+
+- User credentials remain confidential.
+- Passwords are never stored in plain text.
+- Sensitive personal information is accessible only to authorized users.
+- Anonymous ballots cannot be linked to voter identities.
+- Administrative functions are restricted to authorized personnel.
+- Secure communication channels are used for all sensitive transactions.
+
+---
+
+### Integrity
+
+The system shall preserve data integrity by ensuring that:
+
+- Election records cannot be modified without authorization.
+- Every successful vote is permanently recorded.
+- Duplicate voting is prevented.
+- Unauthorized changes are rejected.
+- Administrative actions are recorded within audit logs.
+- Published election results remain immutable.
+- Archived election records remain read-only.
+
+---
+
+### Availability
+
+The system shall maintain availability by ensuring that:
+
+- Eligible users can access the platform during election periods.
+- Elections automatically open and close according to their configured schedules.
+- Temporary failures do not permanently affect election operations.
+- Critical services remain available during peak voting periods.
+- Recovery procedures restore normal operation after unexpected failures.
+
+---
+
+### Election Integrity Principles
+
+The Student Online Voting Platform shall enforce the following election integrity principles:
+
+- One eligible student shall vote only once for each elective position.
+- Every valid vote shall be counted exactly once.
+- Ballot secrecy shall always be maintained.
+- Anonymous ballots shall remain unlinkable to voter identities.
+- Election results shall accurately reflect all valid votes.
+- Every administrative action shall be traceable.
+- Every election shall follow the approved workflow.
+- Election records shall remain protected throughout their lifecycle.
+
+---
+
+### Security Design Principles
+
+The security architecture shall be designed according to the following principles:
+
+- Security shall be integrated into every component of the system.
+- Access shall be granted only after successful authentication.
+- Permissions shall be enforced before every protected operation.
+- Sensitive operations shall require appropriate authorization.
+- Security controls shall remain active throughout the election lifecycle.
+- Security mechanisms shall minimize the impact of system failures.
+- Every critical operation shall be auditable.
+
+---
+
+### Principle of Least Privilege (PoLP)
+
+The system shall implement the Principle of Least Privilege by ensuring that:
+
+- Every user receives only the permissions required for their assigned role.
+- Permissions are granted only when necessary.
+- Administrative privileges are restricted to authorized personnel.
+- Users cannot perform operations outside their assigned responsibilities.
+- Privileges are reviewed whenever user roles change.
+
+---
+
+### Defense in Depth
+
+The system shall implement multiple layers of security by combining:
+
+- User authentication.
+- Role-based authorization.
+- Database access control.
+- Input validation.
+- Secure communication.
+- Audit logging.
+- Error handling.
+- System monitoring.
+
+A failure of one security mechanism shall not compromise the overall security of the platform.
+
+---
+
+### Secure by Default
+
+The system shall operate securely by default by ensuring that:
+
+- New users receive only the minimum required permissions.
+- Protected resources remain inaccessible unless explicitly authorized.
+- Security features are enabled by default.
+- Sensitive information is never exposed through default configurations.
+- System components deny access unless permission has been explicitly granted.
+
+---
+
+### Zero Trust Principle
+
+The system shall follow a Zero Trust approach by assuming that no user, device, or request is trusted automatically.
+
+Accordingly, the system shall:
+
+- Authenticate every user before granting access.
+- Verify user permissions before every protected operation.
+- Validate every request submitted to the system.
+- Monitor security-related activities continuously.
+- Reject unauthorized requests regardless of their origin.
+
+This approach reduces the risk of unauthorized access and strengthens the overall security posture of the Student Online Voting Platform.
+
+---
+
+## 10.2 Authentication Architecture
+
+### Purpose
+
+The Student Online Voting Platform shall implement a secure authentication architecture to verify the identity of every authorized user before granting access to protected system resources.
+
+The authentication architecture shall ensure that only eligible users can access the platform while protecting user accounts against unauthorized access, impersonation, credential theft, and other authentication-related threats.
+
+---
+
+### Authentication Process
+
+The system shall authenticate users using their registered personal email address and password.
+
+The authentication process shall:
+
+- verify that the submitted email address belongs to a registered user.
+- verify the submitted password.
+- verify that the account status permits authentication.
+- determine the authenticated user's assigned role.
+- establish a secure authenticated session.
+- redirect authenticated users to the appropriate dashboard based on their assigned role.
+
+Access shall be denied whenever authentication requirements are not satisfied.
+
+---
+
+### Supported Authentication Method
+
+The system shall support authentication using:
+
+- Registered Personal Email Address
+- Secure Password Authentication
+
+All authorized users shall authenticate using the same authentication mechanism, while access to system resources shall be determined by the user's assigned role and permissions.
+
+---
+
+### Account Activation
+
+The system shall require every student account to be activated before the student is permitted to access protected resources.
+
+The account activation process shall ensure that:
+
+- only students listed in the approved election voter register are eligible for account activation.
+- students provide their registered personal email address and matriculation number during activation.
+- the submitted information matches the imported election voter register.
+- ownership of the registered personal email address is verified before activation is completed.
+- each student account is activated only once.
+- students create their own password during account activation.
+- passwords are securely hashed before storage.
+- successful activation changes the account status from **Pending Activation** to **Active**.
+
+---
+
+### Account Status Lifecycle
+
+Every student account shall exist in one of the following states:
+
+| Status | Description |
+|---------|-------------|
+| Pending Activation | Eligible student imported into the voter register but not yet activated. |
+| Active | Student account has been verified and may access the platform. |
+| Suspended | Account temporarily disabled by an authorized administrator. |
+| Deactivated | Account permanently disabled from accessing the platform. |
+
+The system shall ensure that:
+
+- only Active accounts may successfully authenticate.
+- Pending Activation accounts complete activation before login.
+- Suspended accounts cannot access protected resources.
+- Deactivated accounts remain inaccessible unless restored through an approved administrative process.
+- every account status change is recorded in the audit log.
+
+---
+
+### Password Policy
+
+The system shall enforce the following password requirements:
+
+- passwords shall contain a minimum of eight (8) characters.
+- passwords shall contain uppercase letters.
+- passwords shall contain lowercase letters.
+- passwords shall contain at least one numeric character.
+- passwords shall contain at least one special character.
+- passwords shall never be stored in plain text.
+- passwords shall be securely hashed before storage.
+- users shall authenticate before changing an existing password.
+
+---
+
+### Password Reset
+
+The system shall provide a secure password reset mechanism.
+
+The password reset process shall ensure that:
+
+- only Active accounts may request password reset.
+- password reset requests are associated with the registered personal email address.
+- password reset links or verification codes expire after a limited period.
+- password reset tokens are single-use.
+- users create a new password after successful verification.
+
+---
+
+### Session Management
+
+The system shall securely manage authenticated user sessions.
+
+The system shall ensure that:
+
+- sessions are created only after successful
+
+---
+
+## 10.3 Authorization and Access Control
+
+### Purpose
+
+The Student Online Voting Platform shall implement a comprehensive authorization and access control architecture to ensure that authenticated users can only perform actions permitted by their assigned roles and privileges.
+
+The authorization architecture shall prevent unauthorized access to protected system resources while enforcing the Principle of Least Privilege and maintaining the integrity of election operations.
+
+---
+
+### Authorization Model
+
+The system shall implement Role-Based Access Control (RBAC) as the primary authorization model.
+
+The authorization model shall ensure that:
+
+- every authenticated user is assigned one or more authorized roles.
+- every role is associated with predefined permissions.
+- permissions determine the actions a user may perform.
+- authorization decisions are evaluated before every protected operation.
+- unauthorized requests are denied by default.
+
+---
+
+### Role-Based Access Control
+
+The system shall enforce Role-Based Access Control throughout the platform.
+
+The RBAC implementation shall ensure that:
+
+- permissions are assigned to roles rather than individual users.
+- users inherit permissions through their assigned roles.
+- administrative permissions are restricted to authorized administrative roles.
+- users cannot grant permissions to themselves.
+- role assignments are managed only by authorized administrators.
+
+---
+
+### Permission Evaluation
+
+The system shall evaluate user permissions before allowing access to protected resources.
+
+Permission evaluation shall ensure that:
+
+- user identity has been successfully authenticated.
+- the user account is in an Active status.
+- the requested operation is permitted for the user's assigned role.
+- the requested resource is accessible to the user's assigned role.
+- unauthorized operations are rejected.
+
+---
+
+### Access Control Requirements
+
+The system shall ensure that:
+
+- users access only resources necessary for their assigned responsibilities.
+- administrative functions are inaccessible to unauthorized users.
+- students access only their own personal information.
+- candidates access only functions related to their candidacy.
+- Electoral Officers manage only election resources assigned to them.
+- auditors have read-only access to authorized audit information.
+
+---
+
+### Protected System Resources
+
+The following resources shall require authorization before access is granted:
+
+- User Accounts
+- Student Records
+- Election Records
+- Election Voter Registers
+- Candidate Records
+- Position Records
+- Ballot Information
+- Voting Functions
+- Election Results
+- Reports
+- Audit Logs
+- System Configuration
+
+---
+
+### Authorization Security Requirements
+
+The authorization architecture shall ensure that:
+
+- authorization is verified before every protected operation.
+- authorization decisions are independent of the user interface.
+- unauthorized requests are rejected regardless of their source.
+- every authorization failure is handled securely.
+- sensitive administrative operations are recorded
+
+---
+
+### Future Authorization Extensibility
+
+The authorization architecture shall be designed to support additional authorization mechanisms as the platform evolves.
+
+Future implementations may incorporate attribute-based authorization policies to enforce contextual access control based on factors such as:
+
+- Election ownership.
+- Department.
+- Faculty.
+- User status.
+- Election state.
+- Eligibility requirements.
+
+These policies shall complement the Role-Based Access Control (RBAC) architecture without replacing it.
+
+---
+
+## 10.4 Data Protection and Encryption
+
+### Purpose
+
+The Student Online Voting Platform shall implement comprehensive data protection and encryption mechanisms to safeguard sensitive information against unauthorized access, disclosure, modification, and loss throughout the election lifecycle.
+
+The data protection architecture shall ensure that confidential information remains protected while preserving the integrity and availability of election data.
+
+---
+
+### Data Protection Requirements
+
+The system shall protect all sensitive information processed, transmitted, and stored within the platform.
+
+The data protection architecture shall ensure that:
+
+- sensitive information is accessible only to authorized users.
+- confidential information is protected throughout its lifecycle.
+- personal information is processed in accordance with approved security policies.
+- election records remain protected against unauthorized disclosure.
+- data protection controls apply consistently across all system modules.
+
+---
+
+### Password Protection
+
+The system shall protect user passwords by ensuring that:
+
+- passwords are never stored in plain text.
+- passwords are securely hashed before storage.
+- password hashes cannot be reversed to reveal the original password.
+- password changes invalidate previous credentials where applicable.
+- password storage follows current industry security standards.
+
+---
+
+### Encryption in Transit
+
+The system shall protect information transmitted between users and the platform.
+
+The system shall ensure that:
+
+- all communication occurs through secure encrypted channels.
+- authentication credentials are transmitted securely.
+- session information is protected during transmission.
+- sensitive election information is encrypted while in transit.
+- unencrypted communication is not permitted.
+
+---
+
+### Encryption at Rest
+
+The system shall protect sensitive information stored within the database.
+
+The system shall ensure that:
+
+- confidential information remains protected while stored.
+- sensitive authentication information is securely stored.
+- election records are protected against unauthorized access.
+- stored information maintains confidentiality throughout its retention period.
+
+---
+
+### Sensitive Data Management
+
+The system shall classify and protect sensitive information according to its importance.
+
+Sensitive information shall include:
+
+- User credentials
+- Personal student information
+- Election voter registers
+- Candidate information
+- Audit logs
+- Election configuration
+- Authentication records
+- System configuration data
+
+The system shall ensure that sensitive information is disclosed only to authorized users.
+
+---
+
+### Environment Variable Management
+
+The system shall securely manage application configuration and secrets.
+
+The system shall ensure that:
+
+- sensitive configuration values are not hardcoded within the application.
+- secret keys are securely managed.
+- database credentials are protected.
+- API keys remain confidential.
+- production secrets are separated from development environments.
+
+---
+
+### Data Retention and Protection
+
+The system shall retain election information according to institutional requirements.
+
+The system shall ensure that:
+
+- historical election records remain available for authorized review.
+- archived information remains protected against modification.
+- retained information preserves its integrity.
+- unauthorized deletion of protected information is prevented.
+
+---
+
+### Data Protection Security Requirements
+
+The data protection architecture shall ensure that:
+
+- confidential information remains protected throughout the election lifecycle.
+- encryption mechanisms follow accepted security standards.
+- sensitive information is disclosed only to authorized users.
+- protected information remains available only for legitimate purposes.
+- all protection mechanisms support the integrity and credibility of election operations.
+
+---
+
+## 10.5 Audit Logging and Monitoring
+
+### Purpose
+
+The Student Online Voting Platform shall implement a comprehensive audit logging and monitoring architecture to record significant system activities, support accountability, facilitate security investigations, and maintain the integrity of election operations.
+
+The audit logging architecture shall provide a reliable record of user activities and system events without compromising voter anonymity or election confidentiality.
+
+---
+
+### Audit Logging Requirements
+
+The system shall maintain audit logs for security-related, administrative, and operational activities.
+
+The audit logging architecture shall ensure that:
+
+- significant system events are automatically recorded.
+- audit records accurately reflect performed activities.
+- audit logs remain protected against unauthorized modification.
+- audit information is available only to authorized personnel.
+- audit records support accountability and post-election review.
+
+---
+
+### Authentication Audit Logs
+
+The system shall record authentication-related events, including:
+
+- account activation.
+- successful login.
+- failed login attempts.
+- password reset requests.
+- password changes.
+- account suspension.
+- account reactivation.
+- logout activities.
+
+Authentication logs shall assist in detecting unauthorized access attempts and abnormal account activities.
+
+---
+
+### Administrative Audit Logs
+
+The system shall record all administrative activities performed by authorized users.
+
+Administrative events shall include:
+
+- election creation.
+- election modification.
+- election deletion.
+- election activation.
+- election closure.
+- voter register import.
+- candidate approval.
+- candidate rejection.
+- position management.
+- user role assignment.
+- account suspension and reactivation.
+- system configuration changes.
+
+Every administrative action shall be traceable to the responsible authorized user.
+
+---
+
+### Voting Audit Logs
+
+The system shall record election-related activities while preserving ballot secrecy.
+
+The audit logging architecture shall ensure that:
+
+- vote submission events are recorded.
+- vote timestamps are recorded.
+- election participation is recorded.
+- duplicate voting attempts are recorded.
+- rejected voting attempts are recorded.
+- ballot contents remain anonymous.
+- voter identities are never linked to ballot selections.
+
+---
+
+### System Monitoring
+
+The system shall continuously monitor critical operational events.
+
+Monitoring activities shall include:
+
+- authentication failures.
+- unauthorized access attempts.
+- unexpected application errors.
+- database failures.
+- abnormal voting activities.
+- suspicious administrative actions.
+- system availability.
+
+Monitoring information shall support timely detection of operational and security incidents.
+
+---
+
+### Audit Log Retention
+
+The system shall securely retain audit logs for institutional review and compliance purposes.
+
+The audit logging architecture shall ensure that:
+
+- audit records remain available for authorized review.
+- audit records cannot be altered without authorization.
+- archived audit logs remain protected.
+- audit information supports post-election investigations when required.
+
+---
+
+### Audit Log Security Requirements
+
+The audit logging architecture shall ensure that:
+
+- audit records are automatically generated.
+- audit records accurately represent system activities.
+- audit logs are protected against unauthorized modification.
+- only authorized personnel may access audit logs.
+- audit records preserve voter anonymity.
+- audit logging remains active throughout the election lifecycle.
+- every significant security event is recorded.
+
+---
+
+# Sprint 4 – Security Architecture
+
+**Date:** 23rd July 2026
+
+## Sprint Goal
+
+Design the complete security architecture for the Student Online Voting Platform by defining authentication, authorization, data protection, audit logging, monitoring, and threat protection requirements that will guide secure implementation throughout the system lifecycle.
+
+---
+
+## Work Completed
+
+### Part A – Authentication Architecture
+
+Designed the authentication framework for the platform.
+
+Defined:
+
+- Authentication objectives
+- User authentication workflow
+- Account lifecycle
+- Account activation process
+- Login requirements
+- Session management principles
+- Authentication security requirements
+
+Updated the authentication model to support students using their personal email addresses registered with the institution.
+
+---
+
+### Part B – Authentication Methods
+
+Completed the authentication method specification covering:
+
+- Personal email verification
+- Secure password creation
+- Account activation workflow
+- Password requirements
+- Password reset process
+- Account status validation
+- Secure authentication policies
+
+Refined the activation process so students create their own passwords after successful email verification.
+
+---
+
+### Part C – Authorization and Access Control
+
+Designed the authorization architecture using Role-Based Access Control (RBAC).
+
+Defined:
+
+- Authorization model
+- Role-Based Access Control (RBAC)
+- Permission evaluation
+- Access control requirements
+- Protected system resources
+- Authorization principles
+- Authorization business rules
+
+Prepared the architecture for future integration with PostgreSQL Row Level Security (RLS).
+
+---
+
+### Part D – Data Protection and Encryption
+
+Defined the platform's data protection strategy.
+
+Covered:
+
+- Password protection
+- Encryption in transit
+- Encryption at rest
+- Sensitive data classification
+- Environment variable management
+- Data retention requirements
+- Data protection security requirements
+
+Established the security principles for protecting confidential election information.
+
+---
+
+### Part E – Audit Logging and Monitoring
+
+Designed the audit logging architecture.
+
+Defined:
+
+- Authentication audit logs
+- Administrative audit logs
+- Voting audit logs
+- System monitoring
+- Audit log retention
+- Audit log security requirements
+
+Ensured that audit logging supports accountability while preserving ballot anonymity.
+
+---
+
+### Part F – Threat Protection and Security Validation
+
+Completed the threat protection architecture.
+
+Documented security controls for:
+
+- Input validation
+- SQL Injection prevention
+- Cross-Site Scripting (XSS) protection
+- Cross-Site Request Forgery (CSRF) protection
+- Brute-force protection
+- Session security
+- Secure error handling
+- Security validation requirements
+
+Completed the overall security architecture for the Student Online Voting Platform.
+
+---
+
+## Key Design Decisions
+
+- Adopted personal email authentication instead of institutional email authentication.
+- Students shall create their own passwords after successful email verification.
+- Adopted Role-Based Access Control (RBAC) as the authorization model.
+- Deferred Attribute-Based Access Control (ABAC)-style policies for implementation through PostgreSQL Row Level Security (RLS) during Database Engineering.
+- Defined encryption and data protection requirements as mandatory security controls.
+- Designed a comprehensive audit logging architecture while preserving voter anonymity.
+- Established security validation requirements against common application threats.
+
+---
+
+## Deliverables
+
+- Updated Software Requirements Specification.
+- Completed Security Architecture documentation.
+- Completed Authentication Architecture.
+- Completed Authorization Architecture.
+- Completed Data Protection requirements.
+- Completed Audit Logging requirements.
+- Completed Threat Protection requirements.
+
+---
+
+## Sprint Outcome
+
+Sprint 4 successfully established the complete security architecture for the Student Online Voting Platform.
+
+The security requirements defined in this sprint will serve as the foundation for implementing secure authentication, authorization, database protection, Row Level Security (RLS), audit logging, and application security throughout subsequent development milestones.
+
+---

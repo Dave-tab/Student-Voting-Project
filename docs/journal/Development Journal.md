@@ -258,3 +258,155 @@ These validation rules ensure that every workflow follows the approved election 
 - Introduced exception and alternate workflows for system resilience.
 - Enforced workflow validation to prevent invalid state transitions.
 - Ensured one eligible
+
+---
+
+# Sprint 4 – Security Architecture
+
+**Date:** 23rd July 2026
+
+## Sprint Goal
+
+Design the complete security architecture for the Student Online Voting Platform by defining authentication, authorization, data protection, audit logging, monitoring, and threat protection requirements that will guide secure implementation throughout the system lifecycle.
+
+---
+
+## Work Completed
+
+### Part A – Authentication Architecture
+
+Designed the authentication framework for the platform.
+
+Defined:
+
+- Authentication objectives
+- User authentication workflow
+- Account lifecycle
+- Account activation process
+- Login requirements
+- Session management principles
+- Authentication security requirements
+
+Updated the authentication model to support students using their personal email addresses registered with the institution.
+
+---
+
+### Part B – Authentication Methods
+
+Completed the authentication method specification covering:
+
+- Personal email verification
+- Secure password creation
+- Account activation workflow
+- Password requirements
+- Password reset process
+- Account status validation
+- Secure authentication policies
+
+Refined the activation process so students create their own passwords after successful email verification.
+
+---
+
+### Part C – Authorization and Access Control
+
+Designed the authorization architecture using Role-Based Access Control (RBAC).
+
+Defined:
+
+- Authorization model
+- Role-Based Access Control (RBAC)
+- Permission evaluation
+- Access control requirements
+- Protected system resources
+- Authorization principles
+- Authorization business rules
+
+Prepared the architecture for future integration with PostgreSQL Row Level Security (RLS).
+
+---
+
+### Part D – Data Protection and Encryption
+
+Defined the platform's data protection strategy.
+
+Covered:
+
+- Password protection
+- Encryption in transit
+- Encryption at rest
+- Sensitive data classification
+- Environment variable management
+- Data retention requirements
+- Data protection security requirements
+
+Established the security principles for protecting confidential election information.
+
+---
+
+### Part E – Audit Logging and Monitoring
+
+Designed the audit logging architecture.
+
+Defined:
+
+- Authentication audit logs
+- Administrative audit logs
+- Voting audit logs
+- System monitoring
+- Audit log retention
+- Audit log security requirements
+
+Ensured that audit logging supports accountability while preserving ballot anonymity.
+
+---
+
+### Part F – Threat Protection and Security Validation
+
+Completed the threat protection architecture.
+
+Documented security controls for:
+
+- Input validation
+- SQL Injection prevention
+- Cross-Site Scripting (XSS) protection
+- Cross-Site Request Forgery (CSRF) protection
+- Brute-force protection
+- Session security
+- Secure error handling
+- Security validation requirements
+
+Completed the overall security architecture for the Student Online Voting Platform.
+
+---
+
+## Key Design Decisions
+
+- Adopted personal email authentication instead of institutional email authentication.
+- Students shall create their own passwords after successful email verification.
+- Adopted Role-Based Access Control (RBAC) as the authorization model.
+- Deferred Attribute-Based Access Control (ABAC)-style policies for implementation through PostgreSQL Row Level Security (RLS) during Database Engineering.
+- Defined encryption and data protection requirements as mandatory security controls.
+- Designed a comprehensive audit logging architecture while preserving voter anonymity.
+- Established security validation requirements against common application threats.
+
+---
+
+## Deliverables
+
+- Updated Software Requirements Specification.
+- Completed Security Architecture documentation.
+- Completed Authentication Architecture.
+- Completed Authorization Architecture.
+- Completed Data Protection requirements.
+- Completed Audit Logging requirements.
+- Completed Threat Protection requirements.
+
+---
+
+## Sprint Outcome
+
+Sprint 4 successfully established the complete security architecture for the Student Online Voting Platform.
+
+The security requirements defined in this sprint will serve as the foundation for implementing secure authentication, authorization, database protection, Row Level Security (RLS), audit logging, and application security throughout subsequent development milestones.
+
+---
