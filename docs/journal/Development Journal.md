@@ -704,3 +704,229 @@ Milestone 1 is now formally complete. The project possesses a comprehensive arch
 The project is approved to begin Milestone 2 – Database Engineering.
 
 ---
+
+# Sprint A – AI Implementation Guide
+
+**Date:** 23rd July 2026
+
+## Sprint Goal
+
+Develop a comprehensive AI Implementation Guide that establishes the standards, responsibilities, workflows, engineering principles, and quality requirements governing all AI-assisted contributions to the Student Online Voting Platform.
+
+The objective of this sprint was to create a standardized engineering framework that enables AI assistants to contribute consistently while preserving the approved software architecture, documentation standards, business rules, and implementation methodology.
+
+---
+
+## Work Completed
+
+### Part A – Purpose & Project Context
+
+Defined the purpose and scope of the AI Implementation Guide.
+
+Documented:
+
+- Project overview
+- Project objectives
+- System type
+- Approved technology stack
+- Development methodology
+- Engineering philosophy
+- Core AI implementation principle
+
+---
+
+### Part B – AI Roles & Responsibilities
+
+Established the responsibilities and boundaries for all project participants.
+
+Defined:
+
+- Software Architect
+- Chief Architect (ChatGPT)
+- Database Engineer (Claude)
+- Future AI Contributors
+
+Created a Responsibility Matrix to eliminate role ambiguity and establish accountability throughout the development lifecycle.
+
+---
+
+### Part C – AI Engineering Rules
+
+Defined the mandatory engineering rules governing AI-assisted implementation.
+
+Covered:
+
+- Architecture preservation
+- Requirements compliance
+- Business rule compliance
+- Security-first implementation
+- Scope control
+- Documentation-first development
+- Traceability
+- Clarification over assumptions
+- Naming standards
+- Data integrity
+- Incremental development
+- Human authority
+- Continuous improvement
+
+---
+
+### Part D – SQL Engineering Standards
+
+Established project-wide SQL engineering standards for PostgreSQL and Supabase.
+
+Documented standards for:
+
+- Database platform
+- Naming conventions
+- Tables
+- Primary keys
+- Foreign keys
+- Constraints
+- Indexes
+- Views
+- Functions
+- Triggers
+- Row Level Security (RLS)
+- Performance
+- SQL documentation
+- SQL Design Review
+
+---
+
+### Part E – Documentation Standards
+
+Defined documentation requirements for AI-generated implementations.
+
+Covered:
+
+- Documentation philosophy
+- Documentation principles
+- Implementation documentation
+- Change documentation
+- Documentation consistency
+- Traceability
+- Documentation review
+- Version control documentation
+- Sprint documentation deliverables
+
+---
+
+### Part F – AI Implementation Workflow
+
+Established the mandatory implementation workflow for all future AI-assisted development.
+
+Defined workflow stages covering:
+
+- Documentation review
+- Sprint Implementation Package
+- AI implementation
+- SQL Design Review
+- SQL execution
+- Testing
+- Documentation updates
+- Development Journal updates
+- Version control
+- Sprint approval
+
+---
+
+### Part G – Prompt Engineering Standards
+
+Standardized the structure and quality requirements for all AI prompts.
+
+Defined:
+
+- Prompt philosophy
+- Prompt structure
+- Required project context
+- Scope definition
+- Architecture preservation
+- Clarification requirements
+- Implementation requirements
+- Explanation requirements
+- Prompt quality standards
+
+---
+
+### Part H – SQL Design Review Checklist
+
+Designed a layered SQL Design Review process consisting of five engineering checkpoints:
+
+- Architecture Review
+- Data Integrity Review
+- Security Review
+- Performance Review
+- Maintainability Review
+
+Defined review outcomes, approval requirements, and engineering principles for database implementation.
+
+---
+
+### Part I – AI Quality Assurance
+
+Established the AI Quality Assurance framework.
+
+Covered:
+
+- Quality philosophy
+- Quality objectives
+- Quality standards
+- Quality verification process
+- Evidence-based verification
+- Quality metrics
+- Approval criteria
+- Continuous quality improvement
+
+---
+
+### Part J – Future AI Contributors Guide
+
+Created onboarding guidance for future AI contributors.
+
+Documented:
+
+- Required reading
+- Contribution expectations
+- Collaboration expectations
+- Change management
+- Continuous improvement
+
+Concluded the guide with the Project Engineering Charter, defining the engineering culture and principles governing the Student Online Voting Platform.
+
+---
+
+## Key Design Decisions
+
+- Adopted an Architecture-First and Documentation-Driven development methodology.
+- Clearly separated AI responsibilities to prevent role overlap.
+- Standardized SQL engineering practices for PostgreSQL and Supabase.
+- Introduced the Sprint Implementation Package as the mandatory context for AI implementation.
+- Established a five-layer SQL Design Review process.
+- Adopted evidence-based quality assurance.
+- Created a Project Engineering Charter to define the project's long-term engineering culture.
+
+---
+
+## Deliverables
+
+- Completed AI Implementation Guide.
+- Established AI engineering standards.
+- Defined SQL engineering standards.
+- Standardized prompt engineering practices.
+- Created AI implementation workflow.
+- Defined SQL Design Review process.
+- Established AI Quality Assurance framework.
+- Created Future AI Contributors Guide.
+- Adopted Project Engineering Charter.
+
+---
+
+## Sprint Outcome
+
+Sprint A successfully established the AI Engineering Framework for the Student Online Voting Platform.
+
+The AI Implementation Guide now serves as the authoritative reference for all AI-assisted development activities, ensuring that future implementations remain secure, consistent, maintainable, traceable, and aligned with the approved software architecture and engineering standards.
+
+This framework will govern every future interaction with AI throughout the remaining milestones of the project.
