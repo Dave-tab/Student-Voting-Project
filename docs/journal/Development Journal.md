@@ -1116,3 +1116,190 @@ Created the Sprint Outcome record for documenting sprint completion.
 Sprint B successfully established the Sprint Implementation Template as the standard implementation package for all future AI-assisted development.
 
 This template will ensure that every implementation sprint is documented, traceable, architecture-compliant, reviewable, testable, and consistently executed throughout the remainder of the Student Online Voting Platform project.
+
+---
+
+# Sprint C – Business Rule Mapping
+
+**Date:** 23rd July 2026
+
+## Sprint Goal
+
+Develop a comprehensive Business Rule Mapping document that establishes complete end-to-end traceability for every approved business rule within the Student Online Voting Platform.
+
+The objective of this sprint was to organize business rules into logical classifications, define implementation ownership, establish database and application enforcement strategies, create verification mappings, and document change management procedures that will guide all future implementation throughout Milestone 2.
+
+---
+
+## Work Completed
+
+### Part A – Purpose & Business Rule Mapping Overview
+
+Established the purpose, scope, philosophy, and engineering principles of the Business Rule Mapping document.
+
+Defined:
+
+- Purpose
+- Business Rule Mapping Overview
+- Scope
+- Business Rule Mapping Philosophy
+- Relationship with the Software Requirements Specification (SRS)
+- Relationship with the Software Architecture
+- Relationship with the Database Architecture
+- Relationship with Implementation
+- Intended Users
+- Engineering Principles
+
+---
+
+### Part B – Business Rule Classification
+
+Designed the classification framework for organizing approved business rules.
+
+Defined:
+
+- Classification Principles
+- Business Rule Categories
+- Authentication Rules
+- Authorization Rules
+- User Management Rules
+- Election Management Rules
+- Election Register Rules
+- Candidate Management Rules
+- Voting Rules
+- Result Management Rules
+- Security Rules
+- Audit Rules
+- Data Integrity Rules
+- System Workflow Rules
+- Business Rule Ownership
+- Ownership Layers
+
+---
+
+### Part C – Business Rule Traceability Matrix
+
+Established the Business Rule Traceability Matrix for complete implementation traceability.
+
+Defined:
+
+- Business Rule Traceability Philosophy
+- Traceability Matrix Structure
+- Implementation Status
+- Review Status
+- Traceability Maintenance
+- Example Traceability Record
+
+Added the Implementation Sprint field to identify the milestone and sprint responsible for implementing each approved business rule.
+
+---
+
+### Part D – Database Enforcement Mapping
+
+Documented how approved business rules shall be enforced within PostgreSQL.
+
+Defined:
+
+- Database Enforcement Philosophy
+- Database Enforcement Mechanisms
+- Enforcement Priority
+- Database Enforcement Principles
+
+Established four enforcement priority levels:
+
+- Critical
+- High
+- Medium
+- Low
+
+---
+
+### Part E – Application Enforcement Mapping
+
+Defined application-level enforcement responsibilities.
+
+Documented:
+
+- Application Enforcement Philosophy
+- Frontend Enforcement
+- Backend Enforcement
+- Application Enforcement Sequence
+- Layered Enforcement Principles
+
+Established the validation sequence:
+
+- Frontend Validation
+- Backend Validation
+- Database Enforcement
+
+---
+
+### Part F – Testing & Verification Mapping
+
+Created the verification framework for approved business rules.
+
+Defined:
+
+- Testing Philosophy
+- Verification Strategy
+- Database Testing
+- Backend Testing
+- Frontend Testing
+- Integration Testing
+- Security Testing
+- Performance Testing
+- Evidence Requirements
+- Verification Status
+
+Reinforced the engineering principle that quality shall be verified through evidence rather than assumed through successful execution.
+
+---
+
+### Part G – Change Management & Traceability
+
+Established the framework for maintaining business rule consistency throughout the project lifecycle.
+
+Defined:
+
+- Change Management Philosophy
+- Business Rule Versioning
+- Change Request Process
+- Change Impact Assessment
+- Documentation Synchronization
+- Traceability Maintenance
+
+Created a formal impact assessment process to ensure every approved business rule change remains synchronized across project documentation, implementation, testing, and version control.
+
+---
+
+## Key Design Decisions
+
+- Introduced Business Rule Ownership.
+- Created the Business Rule Traceability Matrix.
+- Added the Implementation Sprint field for implementation traceability.
+- Introduced Enforcement Priority to guide implementation decisions.
+- Defined the Application Enforcement Sequence.
+- Added Evidence Requirements to support evidence-based quality assurance.
+- Established Change Impact Assessment for controlled architecture evolution.
+- Strengthened complete traceability from requirements through implementation and verification.
+
+---
+
+## Deliverables
+
+- Completed Business Rule Mapping document.
+- Established Business Rule Classification framework.
+- Created Business Rule Traceability Matrix.
+- Defined Database Enforcement Mapping.
+- Defined Application Enforcement Mapping.
+- Established Testing & Verification Mapping.
+- Documented Change Management & Traceability framework.
+- Strengthened architecture governance for Milestone 2.
+
+---
+
+## Sprint Outcome
+
+Sprint C successfully established the Business Rule Mapping document as the authoritative reference for implementing, enforcing, verifying, and maintaining approved business rules throughout the Student Online Voting Platform.
+
+This document provides complete traceability from the Software Requirements Specification (SRS) through database enforcement, application implementation, testing, and change management, ensuring that every business rule remains consistent, verifiable, and maintainable throughout the project's lifecycle.
