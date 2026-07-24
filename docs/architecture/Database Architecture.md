@@ -1081,3 +1081,211 @@ SQL Readiness Assessment shall be governed by the following principles:
 > **Approval represents architectural confidence rather than implementation speed.**
 
 > **Design → Review → Approve → Execute shall remain the mandatory engineering workflow throughout Milestone 2.**
+
+---
+
+# Milestone 2 – Sprint 2
+# Part B – Core Entity Implementation Plan
+
+# Architecture Review Checkpoint
+
+## What are we validating?
+
+This part validates the implementation sequence for the core database entities that will be introduced during Sprint 2.
+
+The objective is to ensure that entities are implemented in a logical order based on architectural dependencies, business processes, and referential integrity requirements.
+
+---
+
+## Why is it important?
+
+The implementation sequence directly affects the success of database creation.
+
+Implementing entities in an incorrect order may result in unresolved foreign key references, broken relationships, inconsistent constraints, and unnecessary redevelopment.
+
+A documented implementation sequence provides a repeatable roadmap for SQL generation and database deployment.
+
+---
+
+## Which approved documents govern this work?
+
+This implementation plan shall remain consistent with:
+
+- Software Requirements Specification (SRS)
+- Software Architecture
+- Database Architecture
+- Database Decision Log
+- API Specification
+- AI Implementation Guide
+- Sprint Implementation Template
+- Business Rule Mapping
+
+---
+
+## What must not change during this part?
+
+The following approved architectural decisions shall remain unchanged:
+
+- Approved entities.
+- Approved relationships.
+- Approved business rules.
+- Database naming governance.
+- Database normalization.
+- Engineering workflow.
+- SQL review process.
+
+This part determines implementation order only and shall not redesign the approved database architecture.
+
+---
+
+# Purpose
+
+This section defines the approved implementation sequence for the core database entities.
+
+Its purpose is to establish a dependency-aware implementation plan that preserves referential integrity, supports business workflows, and enables predictable SQL generation.
+
+---
+
+# Core Entity Implementation Philosophy
+
+Database entities shall be implemented in dependency order rather than alphabetical order.
+
+Foundational entities shall always be implemented before dependent entities.
+
+Each implementation step shall preserve data integrity and support the approved business architecture.
+
+---
+
+# Implementation Strategy
+
+Sprint 2 shall implement only the foundational entities required for subsequent database sprints.
+
+The implementation order shall minimize dependency conflicts and ensure that every foreign key references an existing parent entity.
+
+---
+
+# Implementation Order Justification
+
+Every entity included in Sprint 2 shall be reviewed using the following structure before SQL generation.
+
+---
+
+## Implementation Sequence Number
+
+The numerical order in which the entity shall be implemented.
+
+Example:
+
+1
+2
+3
+4
+
+---
+
+## Entity Name
+
+The approved name of the entity as defined in the Database Architecture.
+
+---
+
+## Reason for its Position
+
+Explain why the entity occupies its implementation position.
+
+Examples:
+
+- Independent entity with no foreign keys.
+- Parent entity required by multiple modules.
+- Core authentication entity.
+- Required before child entities can reference it.
+
+---
+
+## Dependencies
+
+List every entity that must already exist before this entity can be created.
+
+If none exist, record:
+
+- None
+
+---
+
+## Dependent Entities
+
+List every entity that depends upon this entity.
+
+This identifies downstream implementation requirements.
+
+---
+
+## Business Rules Covered
+
+Identify the Business Rule IDs enforced or supported by the entity.
+
+Example:
+
+- BR-01
+- BR-04
+- BR-12
+
+If no business rule applies, record:
+
+- Not Applicable
+
+---
+
+## Risk if Implemented Out of Order
+
+Identify the architectural consequences of implementing the entity before its required dependencies.
+
+Examples include:
+
+- Foreign key creation failure.
+- Broken referential integrity.
+- Incomplete business workflow.
+- Constraint violations.
+- Data inconsistency.
+- Migration rollback.
+
+---
+
+# Preliminary Sprint 2 Implementation Sequence
+
+The expected implementation order for Sprint 2 is:
+
+| Sequence | Entity | Purpose |
+|----------|--------|---------|
+| 1 | Users | Core authentication and identity management |
+| 2 | Roles | System authorization and access control |
+| 3 | Students | Student profile and eligibility records |
+| 4 | Administrators | Administrative user records |
+| 5 | Academic Sessions *(if approved in the architecture)* | Academic period reference |
+| 6 | Departments *(if approved in the architecture)* | Department reference data |
+
+> **Note:** This sequence shall be confirmed against the approved Database Architecture before SQL generation. No additional entities shall be introduced without architectural approval.
+
+---
+
+# Entity Dependency Principles
+
+Implementation order shall follow these principles:
+
+- Parent entities before child entities.
+- Reference tables before transactional tables.
+- Authentication entities before application entities.
+- Independent entities before dependent entities.
+- Stable entities before frequently changing entities.
+
+---
+
+# Engineering Principles
+
+> **Implementation order shall be determined by architectural dependency rather than convenience.**
+
+> **Every entity shall be implemented only after all prerequisite entities exist.**
+
+> **Implementation sequencing shall preserve referential integrity throughout database creation.**
+
+> **No entity shall be implemented without documented justification for its position within the implementation sequence.**

@@ -300,3 +300,34 @@ Milestone 2 – Sprint 2
 
 - Software Architect (Dayan)
 - AI Architecture Reviewer (ChatGPT)
+
+---
+
+Decision ID: DB-003
+
+Title:
+Foreign Key Deletion Strategy
+
+Status:
+Approved
+
+Decision:
+All foreign key relationships from Users to Students and Administrators shall use ON DELETE RESTRICT.
+
+Context:
+The Student Online Voting Platform maintains historical records and auditability. Automatic deletion of related records could compromise election integrity and historical data.
+
+Alternatives Considered:
+- CASCADE
+- SET NULL
+
+Rationale:
+Historical records shall be preserved. Future requirements for removing users shall be addressed through archival or deactivation rather than deletion.
+
+Consequences:
+- Prevents accidental data loss.
+- Preserves referential integrity.
+- Supports future audit requirements.
+
+Implementation Sprint:
+Milestone 2 – Sprint 2
