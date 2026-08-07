@@ -1459,3 +1459,468 @@ Milestone 2 – Sprint 1 successfully established the governance, validation fra
 The project is now prepared to begin SQL design and implementation in Sprint 2 using the approved architecture, business rules, documentation standards, and engineering workflow.
 
 No SQL was generated or executed during this sprint, in accordance with the project's Architecture-First Engineering Charter.
+
+# Milestone 2 Developer Journal
+
+## Milestone
+**Milestone 2 – Database Architecture & Core Data Model**
+
+**Status:** ✅ Completed
+
+---
+
+# Milestone Objective
+
+Design and implement the complete production-ready database architecture for the Student Online Voting Platform before beginning backend development.
+
+This milestone focused on building a scalable, normalized, secure, and maintainable PostgreSQL database using a sprint-based architecture process.
+
+Every sprint followed the same engineering workflow:
+
+1. Architecture planning
+2. Sprint Execution Package
+3. SQL generation
+4. Five-Layer Review
+5. Production approval
+6. Supabase execution
+7. Verification
+8. Documentation update
+
+---
+
+# Sprint 1 — Core Database Schema
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+- Core authentication architecture
+- Users table
+- Roles table
+- Administrators table
+- Students table
+- UUID primary keys
+- Foreign keys
+- Naming conventions
+- Initial architecture decisions
+
+## Major Decisions
+
+- UUID used throughout the database
+- Separate Users and Roles architecture
+- Students linked to Users
+- Administrators linked to Users
+- Authentication delegated to Supabase Auth
+
+---
+
+# Sprint 2 — Academic Structure & Student Register
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Created:
+
+- departments
+- programmes
+- levels
+- academic_sessions
+- student_register
+
+Updated:
+
+- students
+
+## Major Decisions
+
+- Student Register becomes the authoritative institutional source
+- Register records are editable
+- CSV import standard established
+- Programme added to CSV structure
+- Students store academic references separately
+- student_register and students remain intentionally decoupled
+- Future activation workflow deferred
+
+---
+
+# Sprint 3 — Election Management Schema
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Created:
+
+- election_statuses
+- elections
+- positions
+
+## Major Decisions
+
+- Positions belong directly to an election
+- No reusable position catalogue
+- Multiple concurrent elections supported
+- Election schedule validation
+- Duplicate position names prevented within an election
+
+Production Improvements:
+
+- CHECK (end_datetime > start_datetime)
+- UNIQUE (election_id, name)
+
+---
+
+# Sprint 4 — Candidate Management
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Created:
+
+- candidate_statuses
+- candidates
+- candidate_details
+
+## Major Decisions
+
+- Hybrid architecture adopted
+- Candidate profile separated from candidature
+- Draft applications supported
+- Progressive profile completion supported
+- Candidate withdrawal supported
+- Candidate reapplication supported
+- Unlimited candidates per position
+
+candidate_details contains:
+
+- campaign_slogan
+- manifesto
+- photo_path
+- approval_remarks
+- withdrawal_reason
+- is_profile_complete
+
+Production Improvements
+
+- Non-empty candidate status names
+- Non-empty photo paths
+
+---
+
+# Sprint 5 — Voting Engine
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Created:
+
+- ballots
+- votes
+
+## Major Decisions
+
+Adopted:
+
+Ballot + Vote architecture
+
+One ballot per student per election.
+
+One vote per position.
+
+Hybrid privacy model:
+
+votes never stores student_id.
+
+student → ballot → votes
+
+Benefits
+
+- Anonymous vote storage
+- Easier vote counting
+- Better normalization
+- Future-proof architecture
+
+---
+
+# Sprint 6 — Audit Logging & Security Foundation
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Created
+
+- audit_event_types
+- audit_logs
+
+## Major Decisions
+
+- Single audit log architecture
+- Immutable audit records
+- Generic entity references
+- No vote selections recorded
+- Accountability preserved
+
+Production Improvement
+
+- Prevent blank entity_type values
+
+---
+
+# Sprint 7 — Database Optimization
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Performance tuning only
+
+No schema changes
+
+Optimizations
+
+Added
+
+- Composite candidate lookup index
+
+Removed redundant indexes
+
+- candidates_election_id_idx
+- ballots_student_id_idx
+- votes_ballot_id_idx
+
+Result
+
+Cleaner indexes
+
+Less write overhead
+
+Better query performance
+
+---
+
+# Sprint 8 — Row Level Security (RLS)
+
+## Status
+
+✅ Completed
+
+## Deliverables
+
+Implemented comprehensive Row Level Security policies.
+
+Protected:
+
+- users
+- students
+- administrators
+- departments
+- programmes
+- levels
+- academic_sessions
+- student_register
+- elections
+- election_statuses
+- positions
+- candidate_statuses
+- candidates
+- candidate_details
+- ballots
+- votes
+- audit_logs
+- audit_event_types
+
+## Major Architecture Decisions
+
+### Authorization
+
+Authorization uses:
+
+Supabase Auth
+
+↓
+
+users
+
+↓
+
+roles
+
+Administrator access is determined through roles.
+
+---
+
+### Candidate Visibility
+
+Only approved candidates are visible.
+
+Candidate approval is determined using:
+
+candidate_statuses.name = 'Approved'
+
+---
+
+### Ballots
+
+Students
+
+- Create
+- View
+- Update
+
+only while
+
+submitted_at IS NULL
+
+Submitted ballots become immutable.
+
+---
+
+### Votes
+
+Votes have
+
+INSERT only
+
+No SELECT
+
+No UPDATE
+
+No DELETE
+
+Students never read raw votes.
+
+Administrators never read raw votes.
+
+Only backend services aggregate results.
+
+---
+
+### Reference Tables
+
+Reference tables are readable by authenticated users.
+
+Modification remains administrator only.
+
+---
+
+### Audit Logs
+
+Students
+
+No access.
+
+Administrators
+
+Read only.
+
+No updates.
+
+No deletes.
+
+Audit history remains immutable.
+
+---
+
+# Engineering Improvements Introduced
+
+Throughout Milestone 2 the project adopted several engineering standards.
+
+## Sprint Execution Packages
+
+Every sprint begins with a formal execution package.
+
+---
+
+## Five-Layer Review Framework
+
+Every migration passes:
+
+1. Scope Review
+2. Architecture Review
+3. Database Design Review
+4. SQL Quality Review
+5. Production Readiness Review
+
+before approval.
+
+---
+
+## Architecture Decision Records (ADRs)
+
+Major architectural choices are permanently documented before implementation.
+
+---
+
+## Business Rules
+
+Every sprint explicitly defines:
+
+- Business Rules
+- Database Decisions
+- Protected Architecture
+- Future Exclusions
+
+---
+
+## SQL Standards
+
+Every migration includes:
+
+- Header documentation
+- Scope declaration
+- Constraint naming
+- Index naming
+- Foreign key naming
+- Footer documentation
+
+---
+
+## Production Philosophy
+
+Every migration is:
+
+- PostgreSQL compatible
+- Supabase compatible
+- Idempotent where appropriate
+- Production ready
+- Fully reviewed before execution
+
+---
+
+# Milestone Outcome
+
+Milestone 2 successfully established the complete database foundation for the Student Online Voting Platform.
+
+Achievements include:
+
+- Fully normalized database architecture
+- Modular sprint-based schema evolution
+- Comprehensive Row Level Security
+- Optimized indexing strategy
+- Clear architecture governance
+- Production-quality SQL migrations
+- Repeatable AI-assisted engineering workflow
+
+The project now has a stable, scalable, and secure database foundation ready for backend API development and application implementation.
+
+---
+
+**Milestone Status:** ✅ Completed
