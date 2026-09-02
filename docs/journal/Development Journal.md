@@ -1924,3 +1924,14 @@ The project now has a stable, scalable, and secure database foundation ready for
 ---
 
 **Milestone Status:** ✅ Completed
+
+
+
+### Batch 18 — Table
+
+* Implemented reusable Table primitives with native semantic HTML.
+* Completed architecture review and local/browser verification.
+* Verified desktop, mobile, hover, light mode, dark mode, and regression behavior.
+* `npm run build` passed.
+
+**Status:** ✅ Complete

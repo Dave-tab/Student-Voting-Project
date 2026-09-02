@@ -1,7 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
-import RootLayout from "../../components/layout/RootLayout";
-import Home from "../../pages/Home";
-import NotFound from "../../pages/NotFound";
+import RootLayout from "@/components/layouts/RootLayout";
+import Home from "@/pages/Home";
+import NotFound from "@/pages/NotFound";
 
 export const routes: RouteObject[] = [
   {

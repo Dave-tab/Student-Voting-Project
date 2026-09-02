@@ -162,3 +162,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 >>>>>>> 8988c63b9c78c3061d8e6fd8a4e2984ee8bb6993
+docs/architecture/CURRENT_ARCHITECTURE_AUDIT_RAW.txt
