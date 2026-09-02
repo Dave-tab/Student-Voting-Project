@@ -1960,3 +1960,19 @@ The project now has a stable, scalable, and secure database foundation ready for
 - Restored the temporary Toast test surface after browser verification.
 
 **Status:** ✅ Complete
+
+### Batch 21 — Skeleton + Spinner
+
+- Implemented reusable Skeleton and Spinner loading-state primitives.
+- Kept both components lightweight, stateless, and independent of application or business logic.
+- Added decorative Skeleton semantics with reduced-motion support.
+- Added accessible Spinner semantics with a meaningful loading status and reduced-motion support.
+- Used CSS/Tailwind animation without introducing new dependencies.
+- Completed architecture review across all five layers.
+- Verified Skeleton appearance, sizing, animation, responsive behavior, light mode, and dark mode.
+- Verified Spinner appearance, sizing, animation, accessibility semantics, responsive behavior, light mode, and dark mode.
+- Verified reduced-motion behavior.
+- Restored the temporary Skeleton + Spinner test surface after browser verification.
+- `npm run build` passed.
+
+**Status:** ✅ Complete
