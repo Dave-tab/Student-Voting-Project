@@ -10,13 +10,17 @@ import {
   UserArea,
 } from "@/components/layouts/ApplicationHeader";
 import { ApplicationSidebar } from "@/components/layouts/ApplicationSidebar";
+import { MobileNavigation } from "@/components/layouts/MobileNavigation";
 
 export default function RootLayout() {
   return (
     <ApplicationShell>
       <ApplicationHeader>
         <ApplicationIdentity>Student Voting Platform</ApplicationIdentity>
-        <UserArea />
+        <div className="flex items-center gap-2">
+          <MobileNavigation />
+          <UserArea />
+        </div>
       </ApplicationHeader>
       <ApplicationBody>
         <ApplicationSidebar />
