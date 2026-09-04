@@ -17,7 +17,7 @@ export default function RootLayout() {
     <ApplicationShell>
       <ApplicationHeader>
         <ApplicationIdentity>Student Voting Platform</ApplicationIdentity>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <MobileNavigation />
           <UserArea />
         </div>

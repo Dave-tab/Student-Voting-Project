@@ -25,14 +25,16 @@ function ApplicationIdentity({
 }: ApplicationIdentityProps) {
   return (
     <div
-      className={cn("text-sm font-semibold text-foreground", className)}
+      className={cn(
+        "min-w-0 truncate text-sm font-semibold text-foreground",
+        className
+      )}
       {...props}
     >
       {children}
     </div>
   );
 }
-
 export type UserAreaProps = HTMLAttributes<HTMLDivElement>;
 
 function UserArea({ className, children, ...props }: UserAreaProps) {
