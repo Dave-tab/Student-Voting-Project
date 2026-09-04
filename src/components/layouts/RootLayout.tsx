@@ -9,6 +9,7 @@ import {
   ApplicationIdentity,
   UserArea,
 } from "@/components/layouts/ApplicationHeader";
+import { ApplicationSidebar } from "@/components/layouts/ApplicationSidebar";
 
 export default function RootLayout() {
   return (
@@ -18,6 +19,7 @@ export default function RootLayout() {
         <UserArea />
       </ApplicationHeader>
       <ApplicationBody>
+        <ApplicationSidebar />
         <MainContent>
           <Outlet />
         </MainContent>
