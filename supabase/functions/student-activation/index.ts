@@ -252,34 +252,13 @@ serve(async (req: Request) => {
       );
     }
 
-    // 8. Resolve academic_session_id and provision public.students persistent profile
-    let academicSessionId = null;
-    if (regStudent.election_id) {
-      const { data: elecData } = await supabaseAdmin
-        .from("elections")
-        .select("academic_session_id")
-        .eq("id", regStudent.election_id)
-        .maybeSingle();
-      if (elecData?.academic_session_id) {
-        academicSessionId = elecData.academic_session_id;
-      }
-    }
-
-    if (!academicSessionId) {
-      const { data: sessData } = await supabaseAdmin
-        .from("academic_sessions")
-        .select("id")
-        .limit(1)
-        .maybeSingle();
-      academicSessionId = sessData?.id || null;
-    }
+    // 8. Provision public.students persistent profile
 
     const { error: studentInsertError } = await supabaseAdmin.from("students").insert({
       user_id: authUserId,
       matriculation_number: regStudent.matriculation_number,
-      department_id: regStudent.department_id,
-      level_id: regStudent.level_id,
-      academic_session_id: academicSessionId,
+      first_name: firstName,
+      last_name: lastName,
     });
 
     if (studentInsertError) {
