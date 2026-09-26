@@ -32,32 +32,28 @@ export async function activateStudentAccount(
   const { matriculationNumber, institutionalEmail, password } = params;
 
   try {
-    const { data, error } = await supabase.functions.invoke("student-activation", {
-      body: {
+    const client = supabase as unknown as { supabaseUrl: string; supabaseKey: string };
+    const supabaseUrl = client.supabaseUrl;
+    const supabaseKey = client.supabaseKey;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/student-activation`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseKey}`,
+        "apikey": supabaseKey,
+      },
+      body: JSON.stringify({
         matriculation_number: matriculationNumber.trim(),
         institutional_email: institutionalEmail.trim().toLowerCase(),
         password: password,
-      },
+      }),
     });
 
-    if (error) {
-      // Handle edge function not deployed / 404 / 500 error gracefully
-      const errorMsg =
-        error.message || "Failed to communicate with the activation service.";
+    const data = await response.json().catch(() => null);
 
-      if (
-        errorMsg.includes("404") ||
-        errorMsg.toLowerCase().includes("not found") ||
-        errorMsg.toLowerCase().includes("failed to send a request to the edge function")
-      ) {
-        return {
-          success: false,
-          message:
-            "The institutional activation service is awaiting Edge Function deployment by the system administrator.",
-          error: "Edge Function 'student-activation' not yet deployed on Supabase.",
-        };
-      }
-
+    if (!response.ok) {
+      const errorMsg = data?.error || `Verification failed (HTTP ${response.status})`;
       return {
         success: false,
         message: errorMsg,
@@ -65,18 +61,10 @@ export async function activateStudentAccount(
       };
     }
 
-    if (!data || data.success === false) {
-      return {
-        success: false,
-        message: data?.error || "Institutional verification failed.",
-        error: data?.error || "Verification failed.",
-      };
-    }
-
     return {
       success: true,
-      message: data.message || "Account successfully activated!",
-      userId: data.user_id,
+      message: data?.message || "Account successfully activated!",
+      userId: data?.user_id,
     };
   } catch (err: unknown) {
     const message =
