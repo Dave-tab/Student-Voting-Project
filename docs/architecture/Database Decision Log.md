@@ -332,16 +332,136 @@ Consequences:
 Implementation Sprint:
 Milestone 2 – Sprint 2
 
+---
+
+## Historical Record Qualification (Sprint 6 Entry)
+
+The historical entry below recorded Sprint 6 completion during earlier Milestone 2 planning, referencing `005_voting_engine_schema.sql`. An authoritative repository inspection revealed that the file `005_voting_engine_schema.sql` is not present in the repository, and the legacy identity-linked schema concept (`ballots` linked to `votes`) has been formally SUPERSEDED by Owner Decision Record ODR-001. No voting engine migration shall be claimed as executed until formally verified in the live database during the future B75–B81 backend architecture review.
+
+```text
+[HISTORICAL / SUPERSEDED ENTRY]
 Sprint 6 — Voting Engine Schema
+Status: ✅ Completed (Historical Record — Superseded by ODR-001)
+Migration: 005_voting_engine_schema.sql (Not present in repository; superseded)
+Execution: Historical reference only
+Review: Five-Layer Review Passed
+```
 
-Status:
-✅ Completed
+---
 
-Migration:
-005_voting_engine_schema.sql
+## DB-004
 
-Execution:
-Successful
+**Title**  
+Anonymous Participation and Selections Architecture (Supersession of Legacy Identity-Linked Voting Model)
 
-Review:
-Five-Layer Review Passed
+**Date**  
+16 September 2026
+
+**Status**  
+Approved (ODR-001 / Decision A)
+
+**Decision**  
+The database shall permanently separate voter identity from ballot selections by replacing/retiring the legacy identity-linked model (`students` → `ballots.student_id` → `votes.ballot_id`) with a two-tier decoupled architecture:
+1. `voter_participation`: Records voter turnout (`student_id`, `election_id`, `participated_at`) without ballot choices.
+2. `ballot_selections`: Records anonymous candidate selections (`election_id`, `position_id`, `candidate_id`) without voter identity or persistent ballot identifiers.
+
+There shall be no foreign key, persistent ballot identifier, or application-level reconstructable relationship linking a voter's identity to their specific selections.
+
+**Context**  
+The legacy model created an indirect but reconstructable join path from student identity to candidate choices via `ballots.id`. To guarantee ballot secrecy (WHO PARTICIPATED ≠ WHAT WAS SELECTED), the identity-linked model must be retired.
+
+**Alternatives Considered**  
+- *Alternative 1 — Keep legacy model*: Rejected due to privacy violation.
+- *Alternative 2 — Keep both models*: Rejected due to competing sources of truth and ambiguity.
+- *Alternative 3 — Retire/replace legacy model*: OWNER-APPROVED (ODR-001).
+
+**Rationale**  
+Ensures mathematical and architectural ballot secrecy while preserving voter turnout accountability.
+
+**Consequences**  
+- The legacy `ballots` and `votes` tables are superseded.
+- Implementation details (table definitions, constraints, indexes, RLS, grants, and drop vs. rename migration strategy) remain subject to B75–B81 architecture review and owner approval.
+
+**Related Documents**  
+- Architecture Decision Log (Decision A, Decision J, ODR-001)
+- Software Architecture
+- Database Architecture
+- Software Requirements Specification (BR-014)
+
+---
+
+## DB-005
+
+**Title**  
+Authoritative Database RPC Voting Submission Boundary & Security Definer Direction
+
+**Date**  
+16 September 2026
+
+**Status**  
+Approved (ODR-003 / Decisions B, C, J)
+
+**Decision**  
+Vote submission shall be executed solely through a single authoritative database RPC configured with `SECURITY DEFINER` and a tightly controlled `search_path`.
+The RPC shall:
+1. Derive caller identity strictly from `auth.uid()`, never trusting caller-supplied identity parameters.
+2. Validate voter eligibility against `student_register` and verify the election time window.
+3. Enforce self-voting prohibition (ODR-003 / BR-016) during identity-aware validation before anonymous selections are persisted.
+4. Execute atomically within a single database transaction: record participation in `voter_participation` and anonymous choices in `ballot_selections`.
+5. Prohibit students from having direct write access to participation or ballot tables.
+
+**Context**  
+Client-side direct writes to database tables cannot be trusted to enforce ballot atomicity, eligibility, and anonymity.
+
+**Alternatives Considered**  
+- *Frontend-orchestrated multiple table writes*: Rejected; vulnerable to tampering and partial failures.
+- *Direct table inserts with RLS*: Insufficient to decouple identity validation from anonymous insertion atomically.
+- *Authoritative RPC*: OWNER-APPROVED.
+
+**Consequences**  
+- Direct write access to voting tables by client roles is denied.
+- Exact RPC signature, SQL implementation, error codes, and grants remain OPEN, subject to B75–B81 review.
+
+**Related Documents**  
+- Architecture Decision Log (Decisions B, C, J, ODR-003)
+- Software Architecture
+
+---
+
+## DB-006
+
+**Title**  
+Dedicated Persisted Results Model & Publication Lifecycle
+
+**Date**  
+16 September 2026
+
+**Status**  
+Approved (ODR-002 / Decisions F, G, H, I)
+
+**Decision**  
+Election results shall be managed through a dedicated persisted results and publication model derived from aggregate anonymous ballot selections.
+The lifecycle is:
+$$\text{Calculated} \longrightarrow \text{Reviewed} \longrightarrow \text{Published} \longrightarrow \text{Immutable}$$
+
+Key Rules:
+1. Aggregate calculations derive solely from `ballot_selections`.
+2. Candidate percentages use the total valid candidate selections for that position as the denominator (excluding abstentions).
+3. Ties are recorded with result status `Tied` and winner `none` (no automatic tie-breaking).
+4. Published results become read-only and immutable.
+5. Administrators may review and publish results, but cannot arbitrarily modify calculated vote counts.
+
+**Context**  
+The previously referenced dynamic view (`vw_election_results`) does not support an explicit administrative review and publication lifecycle, nor does it guarantee post-publication immutability.
+
+**Alternatives Considered**  
+- *Dynamic calculation views only*: Rejected; lacks publication audit trail and state immutability.
+- *Dedicated persisted results model*: OWNER-APPROVED (ODR-002).
+
+**Consequences**  
+- A dedicated results schema will be introduced during backend development.
+- Exact table schema, column definitions, status representations, and calculation functions remain OPEN, subject to B75–B81 review.
+
+**Related Documents**  
+- Architecture Decision Log (Decisions F, G, H, I, ODR-002)
+- Software Requirements Specification (BR-020, BR-021, BR-022, BR-023)

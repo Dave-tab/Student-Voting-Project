@@ -1,0 +1,6 @@
+{
+  "name": "Student Online Voting Platform",
+  "description": "A secure, modern campus electronic voting system designed for secure, transparent, and user-friendly student elections.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

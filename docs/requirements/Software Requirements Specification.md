@@ -178,7 +178,7 @@ The following functionalities are included within the scope of this project:
 
 - Anonymous ballot casting
 - One vote per student per position
-- Vote reference generation
+- Vote confirmation message (superseding vote reference generation per Decision D)
 - Countdown timer
 - Automatic vote confirmation
 
@@ -465,7 +465,7 @@ Students may only participate in elections for which they are eligible.
 - View active elections.
 - Review candidate profiles.
 - Cast votes.
-- Verify voting participation using the generated Vote Reference.
+- Receive vote confirmation upon successful submission (Vote reference superseded per Decision D).
 - View personal voting history without revealing candidate selections.
 
 ### Permissions
@@ -937,7 +937,7 @@ Permission Legend:
 | Cast Vote | ❌ | ❌ | ✅ | ✅* | ❌ |
 | Vote for Self | ❌ | ❌ | ❌ | ❌ | ❌ |
 | View Own Vote | ❌ | ❌ | ❌ | ❌ | ❌ |
-| Generate Vote Reference | ❌ | ❌ | ✅ | ✅ | ❌ |
+| Generate Vote Reference (SUPERSEDED) | ❌ | ❌ | ❌ | ❌ | ❌ |
 | View Voter Turnout | ✅ | ✅ | 👁️ | 👁️ | 👁️ |
 | Close Voting Automatically | System | System | ❌ | ❌ | ❌ |
 
@@ -1101,7 +1101,7 @@ Withdrawals after voting begins shall not be permitted.
 
 ### BR-013: One Student, One Vote Per Position
 
-A student may vote only once for each elective position.
+A student may participate at most once per election and cast at most one valid vote for each elective position.
 
 ---
 
@@ -1109,15 +1109,18 @@ A student may vote only once for each elective position.
 
 Votes shall never store student identity together with candidate selections.
 
-The system shall permanently separate voter identity from ballot records.
+The system shall permanently separate voter identity (`voter_participation`) from ballot selections (`ballot_selections`), ensuring no persistent foreign key, ballot identifier, or application-level reconstructable relationship exists between who voted and what was selected.
 
 ---
 
-### BR-015: Vote Reference
+### BR-015: Vote Confirmation (Supersession of Vote Reference)
 
-After successful voting, the system shall generate a unique Vote Reference Number.
+The previous Vote Reference Number requirement is SUPERSEDED (Decision D).
 
-The reference confirms participation without revealing voting choices.
+After successful submission, the system confirms successful submission and recorded participation with the exact message:  
+*"Vote submitted successfully. Your participation has been recorded."*
+
+The system shall NOT expose a Vote Reference Code, Vote Reference Number, Ballot ID, Submission ID, or ballot retrieval mechanism. No mechanism shall allow a voter or administrator to retrieve, look up, or verify individual ballot selections after submission.
 
 ---
 
@@ -1125,15 +1128,17 @@ The reference confirms participation without revealing voting choices.
 
 Candidates shall not vote for themselves.
 
-If attempted, the system shall reject the vote.
+If attempted, the system shall reject the vote submission.
+
+Self-voting prohibition shall be enforced authoritatively by the voting submission mechanism during identity-aware validation before anonymous selections are persisted (ODR-003). Identity shall never be written to or persisted with anonymous ballot selections.
 
 ---
 
-### BR-017: Election Time Window
+### BR-017: Election Time Window & State
 
-Votes shall only be accepted while the election is open.
+Votes shall only be accepted while the election is active and within its scheduled opening and closing times.
 
-Votes submitted outside the election period shall be rejected.
+The authoritative voting boundary shall validate election status and time window before accepting submission. Votes submitted outside the election period or for non-active elections shall be rejected.
 
 ---
 
@@ -1155,33 +1160,37 @@ Votes cannot be edited, deleted, or replaced.
 
 ## 8.6 Result Rules
 
-### BR-020: Automatic Counting
+### BR-020: Automatic Counting & Anonymous Derivation
 
-The system shall calculate results automatically after voting closes.
+The system shall calculate aggregate election results automatically from anonymous ballot selections after voting closes.
 
-Manual vote counting shall not be required.
-
----
-
-### BR-021: Result Publication
-
-Results shall remain hidden until officially published by an authorized administrator.
+Manual vote counting is prohibited, and student identity tables are never accessed during counting.
 
 ---
 
-### BR-022: Published Results
+### BR-021: Result Review & Publication
 
-Published results become read-only.
+Calculated results shall remain unpublished and visible only to authorized administrators until officially published.
 
-No further modifications shall be permitted.
+Authorized administrators review calculated totals and trigger official publication. Administrator review does NOT permit arbitrary editing of vote totals or manual selection of winners.
 
 ---
 
-### BR-023: Winner Determination
+### BR-022: Published Results & Immutability
+
+Published results become read-only and permanently immutable.
+
+No further modifications or recalculations shall be permitted.
+
+---
+
+### BR-023: Winner Determination, Ties, & Percentages
 
 The candidate with the highest valid votes for a position shall be declared the winner.
 
-Election tie-handling procedures shall follow institutional regulations.
+If two or more candidates tie with the highest valid vote total, the result status is recorded as `Tied` with winner `none`. The system shall NOT perform automatic tie-breakers or arbitrary winner assignment; resolution shall follow institutional regulations.
+
+Candidate percentages shall be calculated using the total valid candidate selections for that position as the denominator, strictly excluding abstentions.
 
 ---
 
@@ -1271,9 +1280,9 @@ Every administrative operation shall generate an audit log entry.
 
 ### BR-034: Transparency
 
-Students may verify that they successfully voted using their Vote Reference Number.
+Students receive immediate confirmation upon successful submission that their participation has been recorded.
 
-The Vote Reference shall never reveal candidate selections.
+In accordance with Decision D, the system does not issue a Vote Reference Number, Ballot ID, or retrieval mechanism, protecting voter privacy and ballot secrecy. Individual candidate selections cannot be retrieved or verified after submission.
 
 ---
 
@@ -1459,8 +1468,8 @@ The Student Workflow shall follow the sequence below:
 10. Student casts votes for available positions.
 11. System validates the submitted votes.
 12. System securely records the anonymous ballots.
-13. System generates a unique vote reference.
-14. Student receives vote confirmation.
+13. System confirms successful submission and records participation (Vote Reference superseded per Decision D).
+14. Student receives vote confirmation message.
 15. Student logs out of the system.
 
 ---
@@ -1477,8 +1486,7 @@ The system shall:
 - Allow students to vote only during the official election period.
 - Prevent inactive or suspended students from accessing the voting portal.
 - Ensure each student votes only once for each elective position.
-- Generate a unique vote reference after successful vote submission.
-- Display a confirmation message after votes have been successfully recorded.
+- Display the confirmation message *"Vote submitted successfully. Your participation has been recorded."* after successful submission (Vote Reference superseded per Decision D).
 - Preserve the anonymity of every submitted ballot.
 - Prevent modification of submitted votes.
 - Record the date and time of every successful vote submission.
@@ -1497,7 +1505,7 @@ The system shall enforce the following rules during the voting process:
 - A student shall not vote for candidates outside their assigned election.
 - A student shall not view election results before official publication.
 - A student shall not edit or withdraw a submitted vote.
-- Every successful vote shall generate a unique vote reference.
+- Every successful vote submission confirms participation without exposing a vote reference or ballot identifier (Decision D).
 - Every submitted ballot shall remain anonymous throughout the election lifecycle.
 
 ---
@@ -1531,7 +1539,7 @@ To ensure a secure and trustworthy voting process, the system shall:
 - Record each successful vote only once.
 - Prevent duplicate vote submissions.
 - Preserve ballot anonymity at all times.
-- Generate a unique vote reference for every successful voting session.
+- Confirm voting participation without exposing ballot identifiers or vote reference codes (Decision D).
 - Maintain complete audit logs for authentication and voting activities without revealing ballot contents.
 - Ensure that network interruptions, browser refreshes or repeated submissions do not result in duplicate votes.
 

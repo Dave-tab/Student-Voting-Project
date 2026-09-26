@@ -3,15 +3,17 @@ import { cn } from "@/lib/utils";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {}
 
-export function Card({ className, ...props }: CardProps) {
+export function Card({ className, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-background text-foreground shadow-sm",
+        "rounded-xl border border-border bg-card text-card-foreground shadow-xs transition-colors",
         className
       )}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
@@ -46,7 +48,7 @@ export interface CardDescriptionProps
 export function CardDescription({ className, ...props }: CardDescriptionProps) {
   return (
     <p
-      className={cn("text-sm text-foreground/70", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   );

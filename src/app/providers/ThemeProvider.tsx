@@ -18,15 +18,17 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const STORAGE_KEY = "theme";
 
 function getInitialTheme(): Theme {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") {
-    return stored;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "light" || stored === "dark") {
+      return stored;
+    }
+  } catch {
+    // Ignore localStorage access errors
   }
 
-  const prefersDark = window.matchMedia(
-    "(prefers-color-scheme: dark)"
-  ).matches;
-  return prefersDark ? "dark" : "light";
+  // Requirement: Default to DARK mode for new sessions/users
+  return "dark";
 }
 
 interface ThemeProviderProps {
@@ -40,7 +42,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    window.localStorage.setItem(STORAGE_KEY, theme);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      // Ignore localStorage access errors
+    }
   }, [theme]);
 
   function setTheme(next: Theme) {

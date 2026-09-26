@@ -823,35 +823,67 @@ Each election shall contain only approved positions.
 
 ### Voting Component
 
-The Voting Component shall manage ballot submission.
+The Voting Component shall manage ballot preparation, authoritative submission, and anonymous recording.
 
-Responsibilities include:
+#### Conceptual Workflow
+$$\text{Authenticated Student} \longrightarrow \text{Authoritative Voting RPC} \longrightarrow \text{Identity-Aware Validation} \longrightarrow \text{Atomic Transaction} \longrightarrow \begin{cases} \text{voter\_participation (Identity-bearing turnout)} \\ \text{ballot\_selections (Anonymous choices)} \end{cases}$$
 
-- Ballot generation.
-- Eligibility verification.
-- Vote validation.
-- Duplicate vote prevention.
-- Anonymous vote recording.
-- Vote confirmation.
+#### Key Architectural Requirements
+1. **Authoritative Submission Boundary (Decisions B, C)**:
+   - All voting transactions must be processed through a single authoritative database RPC configured with `SECURITY DEFINER` and a restricted `search_path`.
+   - Caller identity is derived strictly from `auth.uid()`. Caller-supplied identity parameters are never trusted.
+   - Students shall have no direct write privileges to participation or ballot tables.
+2. **Frontend Untrusted Principle (Decision J / AVI-11)**:
+   - Frontend validation is solely for user guidance. All validation (student eligibility against the election register, active election time window, candidate and position legitimacy, and self-voting checks) is enforced authoritatively on the server inside the RPC.
+3. **Identity & Ballot Separation (Decision A, ODR-001 / AVI-01, AVI-02)**:
+   - Voter participation (turnout) is recorded separately from anonymous ballot selections.
+   - `ballot_selections` contains no voter identity.
+   - No persistent ballot identifier, foreign key, or application link shall connect a student to their specific ballot selections.
+4. **Self-Voting Prohibition Boundary (ODR-003 / BR-016)**:
+   - Candidates are prohibited from voting for themselves.
+   - This check is enforced inside the authoritative RPC during identity-aware validation before anonymous selections are committed. Identity is never persisted with the ballot choice.
+5. **Abstention Semantics (Decision F)**:
+   - A voter may leave any position unselected.
+   - No artificial "Abstain" candidate is created and no fake candidate ID is stored.
+   - Abstentions count toward overall election turnout but are excluded from candidate totals.
+6. **One Student, One Vote (Decision J / AVI-05)**:
+   - A student may participate at most once per election (enforced atomically).
+   - A maximum of one candidate selection per position is allowed.
+7. **Vote Confirmation (Decision D)**:
+   - Upon successful submission, the system confirms: *"Vote submitted successfully. Your participation has been recorded."*
+   - The system shall NOT expose a Vote Reference Code, Vote Reference Number, Ballot ID, or ballot retrieval mechanism. The previous SRS Vote Reference requirement is formally superseded.
 
-The component shall ensure that each eligible student casts only one valid vote per position.
+*Note: The architectural direction is approved. Exact physical implementation remains subject to B75–B81 architecture review and owner approval.*
 
 ---
 
 ### Results Component
 
-The Results Component shall manage vote counting and result publication.
+The Results Component shall manage aggregate vote counting, result verification, and immutable publication.
 
-Responsibilities include:
+#### Results Lifecycle (ODR-002, Decision I)
+$$\text{Anonymous Selections} \longrightarrow \text{Aggregate Calculation} \longrightarrow \text{Calculated (Unpublished)} \longrightarrow \text{Admin Review} \longrightarrow \text{Published} \longrightarrow \text{Immutable}$$
 
-- Vote counting.
-- Result computation.
-- Winner determination.
-- Result publication.
-- Election statistics.
-- Historical result retrieval.
+#### Key Architectural Requirements
+1. **Anonymous Counting (Decision J / AVI-07)**:
+   - All vote counting and tallying must be performed directly and solely from anonymous `ballot_selections`. No student identity tables are accessed during counting.
+2. **Winner Determination & Tie Handling (Decisions F, G)**:
+   - The candidate with the highest valid vote total for a position is declared the winner.
+   - If two or more candidates tie with the highest vote total, the result status is recorded as `Tied` with winner `none`.
+   - The system shall NOT implement automatic tie-breakers, runoffs, random selection, or arbitrary winner assignment. Resolution follows the applicable institutional regulations.
+3. **Percentage Denominator Formula (Decisions F, H)**:
+   - Candidate percentages are calculated as:
+     $$\text{Percentage} = \frac{\text{Candidate Valid Votes}}{\text{Total Valid Candidate Selections for Position}} \times 100$$
+   - Abstentions are strictly excluded from the candidate-percentage denominator.
+4. **Publication & Immutability Lifecycle (Decision I, ODR-002)**:
+   - Calculated results are initially unpublished and visible only to authorized administrators.
+   - Authorized administrators review the calculated totals and trigger official publication.
+   - Administrator review does NOT permit arbitrary editing of calculated vote totals or manual winner selection.
+   - Once published, results become read-only and permanently immutable.
+5. **Dedicated Persisted Results Model (ODR-002)**:
+   - A dedicated persisted result architecture shall store aggregate results and publication state (superseding sole reliance on dynamic views).
 
-The Results Component shall maintain accuracy, transparency, and integrity.
+*Note: The architectural direction is approved. Exact physical implementation remains subject to B75–B81 architecture review and owner approval.*
 
 ---
 

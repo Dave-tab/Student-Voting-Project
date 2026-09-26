@@ -4,7 +4,6 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-<<<<<<< HEAD
 pnpm-debug.log*
 lerna-debug.log*
 
@@ -23,8 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-=======
-lerna-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -161,5 +158,4 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
->>>>>>> 8988c63b9c78c3061d8e6fd8a4e2984ee8bb6993
 docs/architecture/CURRENT_ARCHITECTURE_AUDIT_RAW.txt

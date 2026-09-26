@@ -658,7 +658,9 @@ Examples:
 - `users`
 - `elections`
 - `candidates`
-- `votes`
+- `voter_participation` (turnout records — Decision A)
+- `ballot_selections` (anonymous choices — Decision A)
+- `votes` [SUPERSEDED / LEGACY — ODR-001; legacy model replaced by anonymous participation/selections architecture]
 
 ---
 
@@ -714,7 +716,7 @@ Recommended prefixes include:
 Examples:
 
 - `pk_students`
-- `fk_votes_student`
+- `fk_votes_student` [SUPERSEDED / LEGACY — ODR-001; direct foreign keys from student to vote records violate anonymous voting]
 - `uq_users_email`
 - `ck_elections_status`
 
@@ -729,7 +731,7 @@ Indexes shall use the prefix:
 Examples:
 
 - `idx_students_email`
-- `idx_votes_election`
+- `idx_votes_election` [Historical naming example]
 
 ---
 
@@ -742,7 +744,7 @@ Triggers shall use the prefix:
 Examples:
 
 - `trg_update_timestamp`
-- `trg_prevent_duplicate_vote`
+- `trg_prevent_duplicate_vote` [Historical naming example]
 
 ---
 
@@ -752,9 +754,9 @@ Functions shall use descriptive verb-based names.
 
 Examples:
 
-- `calculate_results`
+- `calculate_results` [Historical naming example; dedicated persisted results model approved under ODR-002]
 - `record_audit_log`
-- `validate_vote`
+- `validate_vote` [Historical naming example; authoritative RPC boundary approved under Decisions B, C]
 
 ---
 
@@ -766,7 +768,7 @@ Views shall use the prefix:
 
 Examples:
 
-- `vw_election_results`
+- `vw_election_results` [Historical naming example; superseded as authoritative results model by ODR-002]
 - `vw_active_candidates`
 
 ---
@@ -880,6 +882,75 @@ Database Naming Governance shall be governed by the following principles:
 > **Every SQL object generated throughout Milestone 2 shall comply with the approved naming governance.**
 
 > **Naming standards shall remain consistent across the database, documentation, and implementation.**
+
+---
+
+# Part E – Authoritative Conceptual Voting & Results Data Architecture
+
+## Architecture Review Checkpoint
+
+### What are we establishing?
+This part establishes the authoritative conceptual data architecture governing voting participation, anonymous ballot selections, and result persistence, aligning database architecture with Decisions A–J, Invariants AVI-01–AVI-12, and Owner Decision Records ODR-001, ODR-002, and ODR-003.
+
+### Why is it important?
+To guarantee absolute ballot secrecy (WHO PARTICIPATED ≠ WHAT WAS SELECTED), the database architecture must permanently separate voter identity from candidate choices while preserving voter turnout accountability.
+
+---
+
+## 1. Authoritative Conceptual Model: Decoupled Participation & Selections (Decision A, ODR-001)
+
+The database replaces the legacy identity-linked model with two conceptually distinct, decoupled entities:
+
+### A. `voter_participation` (Identity-Bearing Turnout)
+- **Purpose**: Records that an authenticated eligible student has cast their vote in a specific election.
+- **Conceptual Attributes**: `student_id`, `election_id`, `participated_at`.
+- **Integrity Rule**: Ensures each student participates at most once per election (`AVI-05`). Contains NO information regarding which positions were voted on, candidate choices, or abstentions.
+
+### B. `ballot_selections` (Anonymous Candidate Choices)
+- **Purpose**: Records individual candidate selections cast within an election.
+- **Conceptual Attributes**: `election_id`, `position_id`, `candidate_id`.
+- **Integrity Rule**: Contains NO voter identity (`student_id`, `user_id`, or `matric_number`), no submission IP, and NO persistent ballot identifier (`ballot_id`).
+- **Anonymity Guarantee (`AVI-01`, `AVI-02`)**: There is NO foreign key, unique constraint, or reconstructable application-level link connecting `voter_participation` to `ballot_selections`.
+
+---
+
+## 2. Supersession of Legacy Identity-Linked Voting Model (ODR-001)
+
+```text
+[SUPERSEDED / LEGACY — ODR-001]
+Legacy Model: students (id) ──> ballots (student_id, election_id) ──> votes (ballot_id, position_id, candidate_id)
+Status: FORMALLY SUPERSEDED by Owner Decision Record ODR-001
+Reason: Persistent ballot_id links student identity to candidate choices, violating anonymous voting.
+```
+
+The database architecture no longer recognizes the legacy `ballots` + `votes` structure as authoritative. That structure is preserved only as a historical artifact pending dependency inspection, data-safety verification, and controlled replacement during backend implementation.
+
+---
+
+## 3. Authoritative Voting Submission Boundary (Decisions B, C, J, ODR-003)
+
+- **Atomic RPC Boundary**: All voting submissions must execute through a single authoritative database function/RPC with `SECURITY DEFINER` and a restricted `search_path`.
+- **Identity Derivation**: Identity is derived solely from `auth.uid()`; caller-supplied identity parameters are strictly rejected.
+- **Self-Voting Validation (ODR-003)**: Self-voting prohibition is enforced inside the RPC during identity-aware validation before anonymous selections are persisted. Identity is never written to `ballot_selections`.
+- **Access Control (`AVI-08`, `AVI-11`)**: Client roles (such as students) are denied direct write privileges to both `voter_participation` and `ballot_selections`. All mutations occur within the atomic RPC transaction.
+
+---
+
+## 4. Dedicated Persisted Results and Publication Model (ODR-002, Decisions F, G, H, I)
+
+- **Persisted Results Architecture**: Results shall be managed through a dedicated persisted results model rather than solely relying on dynamic database views (such as `vw_election_results`, which is superseded as the authoritative results authority).
+- **Lifecycle**:
+  $$\text{Calculated (Unpublished)} \longrightarrow \text{Admin Reviewed} \longrightarrow \text{Published} \longrightarrow \text{Permanently Immutable}$$
+- **Aggregation Boundary (`AVI-07`)**: Calculations aggregate directly from anonymous `ballot_selections`.
+- **Candidate Percentages**: Calculated using total valid candidate selections for that position as the denominator; abstentions are excluded from candidate percentages (Decisions F, H).
+- **Tie Semantics**: Tied highest votes result in status `Tied` and winner `none`; no automatic tie-breaking (Decision G).
+- **Immutability**: Published results cannot be edited or recalculated.
+
+---
+
+## 5. Implementation Status: Explicitly OPEN
+
+> **The architectural direction is approved. Exact physical implementation (exact table names, column definitions, data types, status enums, constraints, indexes, triggers, RLS policies, grants, RPC signatures, SQL bodies, and migration scripts) remains subject to B75–B81 architecture review and owner approval.**
 
 ---
 

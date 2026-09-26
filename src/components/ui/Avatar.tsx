@@ -95,7 +95,7 @@ function AvatarFallback({ className, ...props }: AvatarFallbackProps) {
   return (
     <div
       className={cn(
-        "flex h-full w-full items-center justify-center rounded-full bg-foreground/10 text-sm font-medium text-foreground/60",
+        "flex h-full w-full items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary border border-primary/20",
         className
       )}
       {...props}

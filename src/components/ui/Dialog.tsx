@@ -167,10 +167,11 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
       }
     }
 
+    const triggerElement = triggerRef.current;
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      triggerRef.current?.focus();
+      triggerElement?.focus();
     };
   }, [open, setOpen, triggerRef]);
 

@@ -1621,9 +1621,11 @@ Production Improvements
 
 ## Status
 
-✅ Completed
+✅ Completed (Historical Design Phase — Formally Superseded by ODR-001)
 
-## Deliverables
+> **Historical Record Qualification (ODR-001):** The "Hybrid privacy model" (`ballots` linked to `votes`) recorded below represents an earlier design phase. An authoritative repository audit established that the migration referenced for this schema (`005_voting_engine_schema.sql`) is not present in the repository, and the underlying data model linking voter identity to ballot choices has been formally **SUPERSEDED** by Owner Decision Record ODR-001. The approved conceptual model decouples participation (`voter_participation`) from anonymous selections (`ballot_selections`). Implementation details remain subject to B75–B81 backend architecture review.
+
+## Deliverables (Historical Reference)
 
 Created:
 
@@ -1996,5 +1998,71 @@ The project now has a stable, scalable, and secure database foundation ready for
 * Verified existing component behavior remained unaffected.
 * `npm run build` passed.
 * Restored the temporary Empty State test surface after browser verification.
+
+**Status:** ✅ Complete
+
+---
+
+# Milestone 3 — Documentation Reconciliation & Architecture Synchronization Package
+
+**Date:** 16 September 2026  
+**Package Type:** Documentation Reconciliation / Architecture Synchronization  
+**Authority:** David Ayantade Tolulope (DAYAN) — Project Owner & Final Decision Authority  
+**Current Milestone / Package:** Milestone 3 (Frontend Application Development) — Package 5 (Results — B51–B53)  
+
+### Purpose
+Synchronize and reconcile all six canonical project documents with approved Architectural Decisions A–J, Invariants AVI-01 through AVI-12, and Owner Decision Records ODR-001, ODR-002, and ODR-003, resolving documentation conflicts without altering application code or database schema.
+
+### Inputs & Authoritative Decisions
+1. **Approved Architectural Decisions (A–J)**:
+   - Decision A: Decoupled Anonymous Participation & Selections Architecture.
+   - Decision B: Authoritative Database RPC Voting Submission Boundary.
+   - Decision C: Security Definer Direction for Voting RPC.
+   - Decision D: Vote Confirmation & Rejection of Vote Reference System.
+   - Decision E: Single Student Register Source of Truth.
+   - Decision F: Results Calculation Rules, Abstentions, and Percentage Formulas.
+   - Decision G: Result Tie Semantics (Status `Tied`, winner `none`).
+   - Decision H: Candidate Percentage Denominator (Valid candidate selections only).
+   - Decision I: Results Publication & Immutability Lifecycle.
+   - Decision J: Authoritative Voting Invariants (AVI-01 through AVI-12).
+2. **Owner Decision Records**:
+   - **ODR-001**: Retirement and supersession of the legacy identity-linked voting model (`ballots` + `votes`) in favor of decoupled `voter_participation` and `ballot_selections`.
+   - **ODR-002**: Dedicated persisted results model and formal publication lifecycle (`Calculated` → `Reviewed` → `Published` → `Immutable`), replacing dynamic-only view architecture.
+   - **ODR-003**: Enforce self-voting prohibition inside the authoritative voting RPC during identity-aware validation before anonymous selections are committed.
+
+### Affected Documents & Reconciliation Summary
+1. **`docs/architecture/Architecture Decision Log.md`**:
+   - Recorded Decisions A–J in full.
+   - Recorded Owner Decision Records ODR-001, ODR-002, and ODR-003.
+   - Established authoritative cross-references for voting and results architecture.
+2. **`docs/architecture/Database Decision Log.md`**:
+   - Qualified historical Sprint 6 entry referencing `005_voting_engine_schema.sql` (not present in repo; superseded).
+   - Added DB-004: Anonymous Participation and Selections Architecture (ODR-001).
+   - Added DB-005: Authoritative Database RPC Voting Submission Boundary (ODR-003).
+   - Added DB-006: Dedicated Persisted Results Model & Publication Lifecycle (ODR-002).
+   - Marked exact physical SQL/table definitions as OPEN for future B75–B81 review.
+3. **`docs/architecture/Software Architecture.md`**:
+   - Updated Voting Component to reflect the authoritative pipeline: Authenticated student → Authoritative voting RPC → Identity-aware validation → Atomic submission → `voter_participation` + anonymous `ballot_selections`.
+   - Updated Results Component to reflect: Anonymous selections → Aggregate calculation → Persisted results (`Calculated` → `Reviewed` → `Published` → `Immutable`).
+   - Embedded frontend-untrusted principle, abstention semantics, percentage denominator rules, tie semantics, self-voting boundary, and Vote Reference removal.
+4. **`docs/architecture/Database Architecture.md`**:
+   - Qualified legacy naming examples (`votes`, `fk_votes_student`, `vw_election_results`, `calculate_results`) as historical and superseded by ODR-001/ODR-002.
+   - Added `Part E – Authoritative Conceptual Voting & Results Data Architecture`, formally documenting the conceptual roles of `voter_participation` and `ballot_selections`, retirement of legacy identity-linked tables, authoritative RPC boundary, and dedicated persisted results model.
+   - Explicitly marked physical database artifacts as OPEN pending B75–B81.
+5. **`docs/requirements/Software Requirements Specification.md`**:
+   - BR-013: Clarified one participation per election and one vote per position.
+   - BR-014: Clarified permanent separation of identity (`voter_participation`) from ballot choices (`ballot_selections`).
+   - BR-015: Formally superseded Vote Reference Number; replaced with exact confirmation message *"Vote submitted successfully. Your participation has been recorded."* without exposing identifiers or ballot retrieval mechanisms (Decision D).
+   - BR-016: Preserved candidate self-voting prohibition; added authoritative RPC enforcement boundary before anonymous selection persistence (ODR-003).
+   - BR-017–BR-019: Reconciled election window validation with authoritative voting boundary.
+   - BR-020–BR-023: Reconciled results rules: automatic counting solely from anonymous selections, administrative review without arbitrary modification, read-only published immutability, highest valid votes winner, tie = status `Tied` / winner `none`, and percentage calculation excluding abstentions.
+   - Harmonized all cross-cutting references to Vote Reference in Scope, Responsibilities, Matrix, BR-034, and Student Workflow.
+6. **`docs/journal/Development Journal.md`**:
+   - Documented this reconciliation package, its inputs, affected documents, and findings.
+   - Qualified historical Sprint 5 and Sprint 6 claims regarding `005_voting_engine_schema.sql` and the legacy "hybrid" model.
+
+### Implementation Status
+- **Zero Schema or Code Modifications**: No application code, SQL, database schema, RLS, grants, RPCs, or migrations were modified or executed in this documentation reconciliation package.
+- **B75–B81 Boundary**: The backend voting engine (B75–B81) remains future backend architecture work and has NOT been implemented.
 
 **Status:** ✅ Complete

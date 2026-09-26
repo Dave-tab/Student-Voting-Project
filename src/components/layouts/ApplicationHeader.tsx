@@ -26,12 +26,24 @@ function ApplicationIdentity({
   return (
     <div
       className={cn(
-        "min-w-0 truncate text-sm font-semibold text-foreground",
+        "flex items-center gap-3 min-w-0",
         className
       )}
       {...props}
     >
-      {children}
+      <img
+        src="/images/branding/polytechnic-ibadan-logo.png"
+        alt="The Polytechnic, Ibadan Seal"
+        className="h-10 w-10 shrink-0 rounded-full object-contain border border-border/80 bg-white p-0.5 shadow-xs"
+      />
+      <div className="flex flex-col min-w-0">
+        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground leading-none">
+          The Polytechnic, Ibadan
+        </span>
+        <span className="text-sm sm:text-base font-bold tracking-tight text-foreground truncate mt-0.5 leading-snug">
+          {children ?? "Student Online Voting Platform"}
+        </span>
+      </div>
     </div>
   );
 }
