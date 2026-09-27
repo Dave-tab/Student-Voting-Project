@@ -70,11 +70,12 @@ export function getElectionStatusBadgeConfig(status: ElectionStatusType): {
 }
 
 /**
- * Calculates a presentation-only countdown string.
+ * Calculates a presentation countdown string derived from authoritative election timestamps.
+ * Continuous precision down to seconds without premature static fallback (Package Sec 20 & 21).
  */
-export function getPresentationCountdown(election: Election): string | null {
+export function getPresentationCountdown(election: Election, nowMs?: number): string | null {
   const status = getElectionStatus(election);
-  const now = new Date().getTime();
+  const now = nowMs ?? Date.now();
   const start = new Date(election.start_datetime).getTime();
   const end = new Date(election.end_datetime).getTime();
 
@@ -84,16 +85,16 @@ export function getPresentationCountdown(election: Election): string | null {
     if (diff <= 0) {
       return "Scheduled to open";
     }
-    return formatTimeDifference(diff, "Voting opens in");
+    return `Starts in: ${formatTimeDifference(diff)}`;
   }
 
   if (status === "Open" || status === "Active") {
     if (isNaN(end)) return null;
     const diff = end - now;
     if (diff <= 0) {
-      return "Voting closing soon";
+      return "00 : 00 : 00 (Concluded)";
     }
-    return formatTimeDifference(diff, "Voting closes in");
+    return `Voting Live: ${formatTimeDifference(diff)} remaining`;
   }
 
   if (status === "Closed" || status === "Ended") {
@@ -107,19 +108,20 @@ export function getPresentationCountdown(election: Election): string | null {
   return null;
 }
 
-function formatTimeDifference(ms: number, prefix: string): string {
-  const totalSeconds = Math.floor(ms / 1000);
+export function formatTimeDifference(ms: number): string {
+  if (ms <= 0) return "00 : 00 : 00";
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
 
   if (days > 0) {
-    return `${prefix}: ${days}d ${hours}h ${minutes}m`;
+    return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   }
-  if (hours > 0) {
-    return `${prefix}: ${hours}h ${minutes}m`;
-  }
-  return `${prefix}: ${minutes}m`;
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
 export interface DateFormatOptions {

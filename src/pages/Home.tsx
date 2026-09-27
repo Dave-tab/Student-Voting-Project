@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getStudentMatricNumber,
   getEligibleElections,
+  getStudentProfileDetails,
 } from "@/features/elections/services/electionService";
 import {
   formatElectionDateWAT,
@@ -32,9 +33,16 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [matricNumber, setMatricNumber] = useState<string | null>(null);
+  const [studentName, setStudentName] = useState<string | null>(null);
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Auto-redirect administrative accounts to /admin
   useEffect(() => {
@@ -52,14 +60,24 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        // 1. Resolve matriculation number
-        const matric = await getStudentMatricNumber(user.id, user.email);
+        // 1. Resolve student profile details to get their full name
+        const profile = await getStudentProfileDetails(user.id, user.email || "");
         if (ignore) return;
-        setMatricNumber(matric);
+        let activeMatric = null;
+        if (profile) {
+          setStudentName(profile.fullName);
+          setMatricNumber(profile.matricNumber);
+          activeMatric = profile.matricNumber;
+        } else {
+          const matric = await getStudentMatricNumber(user.id, user.email);
+          if (ignore) return;
+          setMatricNumber(matric);
+          activeMatric = matric;
+        }
 
         // 2. Fetch eligible elections
-        if (matric) {
-          const eligible = await getEligibleElections(matric);
+        if (activeMatric) {
+          const eligible = await getEligibleElections(activeMatric);
           if (!ignore) setElections(eligible);
         } else {
           if (!ignore) setElections([]);
@@ -118,7 +136,7 @@ export default function Home() {
                 The Polytechnic, Ibadan
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-                Welcome back, {user?.email ? user.email.split("@")[0] : "Student"}
+                Welcome back, {studentName || (user?.email ? user.email.split("@")[0] : "Student")}
               </h1>
             </div>
           </div>
@@ -240,7 +258,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {openElections.map((election) => {
               const badge = getElectionStatusBadgeConfig(getElectionStatus(election));
-              const countdown = getPresentationCountdown(election);
+              const countdown = getPresentationCountdown(election, now);
 
               return (
                 <Card

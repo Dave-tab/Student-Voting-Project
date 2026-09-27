@@ -6,14 +6,18 @@ import {
   getElectionPositions,
   getApprovedCandidates,
   getStudentMatricNumber,
+  getStudentCandidacy,
+  type StudentCandidacyStatus,
 } from "@/features/elections/services/electionService";
+import { CandidateApplicationDialog } from "@/features/elections/components/CandidateApplicationDialog";
+import { supabase } from "@/lib/supabase";
 import type { Election, Position, Candidate } from "@/features/elections/types";
 import {
   getElectionStatus,
   getElectionStatusBadgeConfig,
-  getPresentationCountdown,
   formatElectionDate,
 } from "@/features/elections/utils/electionUtils";
+import { useLiveCountdown } from "@/features/elections/hooks/useLiveCountdown";
 import {
   Card,
   CardHeader,
@@ -73,7 +77,14 @@ export default function ElectionDetails() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Student candidate application states
+  const [resolvedStudentId, setResolvedStudentId] = useState<string | null>(null);
+  const [resolvedMatric, setResolvedMatric] = useState<string | null>(null);
+  const [candidacy, setCandidacy] = useState<StudentCandidacyStatus | null>(null);
+  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+
   const [refreshIndex, setRefreshIndex] = useState(0);
+  const countdownText = useLiveCountdown(election);
 
   useEffect(() => {
     let isMounted = true;
@@ -105,6 +116,22 @@ export default function ElectionDetails() {
         const candidatesData = await getApprovedCandidates(electionId);
         if (!isMounted) return;
         setCandidates(candidatesData);
+
+        // Fetch student's own candidacy if authenticated
+        if (user?.id) {
+          const { data: std } = await supabase
+            .from("students")
+            .select("id, matriculation_number")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (std?.id && isMounted) {
+            setResolvedStudentId(std.id);
+            setResolvedMatric(std.matriculation_number);
+            const cand = await getStudentCandidacy(electionId, std.id);
+            if (isMounted) setCandidacy(cand);
+          }
+        }
       } catch (err: unknown) {
         if (!isMounted) return;
         console.error("Error loading election details:", err);
@@ -223,7 +250,6 @@ export default function ElectionDetails() {
 
   const status = getElectionStatus(election);
   const badgeConfig = getElectionStatusBadgeConfig(status);
-  const countdownText = getPresentationCountdown(election);
 
   // Group approved candidates by position
   const candidatesByPosition: Record<string, Candidate[]> = {};
@@ -326,6 +352,95 @@ export default function ElectionDetails() {
             <Award className="h-4 w-4" />
             View Archived Results
           </Button>
+        </div>
+      )}
+
+      {/* Student Candidacy Filing Card */}
+      {candidacy && (
+        <Card className="border border-primary/30 bg-primary/5 p-4 rounded-xl shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Your Candidacy Filing
+                </span>
+                <Badge
+                  variant={
+                    candidacy.status_name.toLowerCase() === "approved"
+                      ? "success"
+                      : candidacy.status_name.toLowerCase().includes("pending")
+                      ? "warning"
+                      : "destructive"
+                  }
+                  className="text-[10px]"
+                >
+                  Status: {candidacy.status_name}
+                </Badge>
+              </div>
+              <h3 className="text-base font-bold text-foreground">
+                Contesting for: {candidacy.position_name}
+              </h3>
+              {candidacy.campaign_slogan && (
+                <p className="text-xs text-muted-foreground italic">
+                  "{candidacy.campaign_slogan}"
+                </p>
+              )}
+              {candidacy.manifesto && (
+                <div className="pt-1 text-xs text-foreground/80 line-clamp-2">
+                  <strong>Manifesto:</strong> {candidacy.manifesto}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground sm:text-right shrink-0">
+              <span>Submitted: {new Date(candidacy.created_at).toLocaleDateString()}</span>
+              {candidacy.status_name.toLowerCase().includes("pending") && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium mt-0.5">
+                  Awaiting Electoral Officer Vetting
+                </p>
+              )}
+              {candidacy.status_name.toLowerCase() === "approved" && (
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
+                  Ballot Eligible (Approved)
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Candidacy Application CTA if not already applied and prior to voting window opening */}
+      {!candidacy && (status === "Draft" || status === "Scheduled" || status === "Upcoming") && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-primary/30 bg-card shadow-xs">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+              <Award className="h-4 w-4" />
+              <span>Student Leadership &amp; Governance</span>
+            </div>
+            <h3 className="text-base font-bold text-foreground">
+              Interested in Running for Office?
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Eligible students appearing on the voter register may submit a candidate nomination for elective positions before the election opens.
+            </p>
+          </div>
+          <Button
+            onClick={() => setApplyDialogOpen(true)}
+            disabled={!resolvedStudentId || positions.length === 0}
+            className="shrink-0 gap-1.5 text-xs font-semibold"
+            size="sm"
+          >
+            <Award className="h-3.5 w-3.5" />
+            <span>File Candidacy Application</span>
+          </Button>
+        </div>
+      )}
+
+      {/* Candidacy Application Closed Message (Decision 2) */}
+      {!candidacy && (status === "Open" || status === "Active" || status === "Closed" || status === "Ended" || status === "Published") && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30 text-muted-foreground text-sm italic">
+          <Info className="h-4 w-4 shrink-0" />
+          <span>Candidate applications are closed for this election.</span>
         </div>
       )}
 
@@ -637,6 +752,20 @@ export default function ElectionDetails() {
           </DialogContent>
         )}
       </Dialog>
+
+      {/* Candidate Nomination Application Modal */}
+      {resolvedStudentId && resolvedMatric && (
+        <CandidateApplicationDialog
+          isOpen={applyDialogOpen}
+          onClose={() => setApplyDialogOpen(false)}
+          electionId={election.id}
+          electionTitle={election.title}
+          positions={positions}
+          studentId={resolvedStudentId}
+          matricNumber={resolvedMatric}
+          onSuccess={() => setRefreshIndex((p) => p + 1)}
+        />
+      )}
     </div>
   );
 }

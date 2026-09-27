@@ -29,6 +29,8 @@ serve(async (req: Request) => {
 
   if (corsOrigin) {
     corsHeaders["Access-Control-Allow-Origin"] = corsOrigin;
+  } else {
+    corsHeaders["Access-Control-Allow-Origin"] = "*"; // Support direct browser/applet access
   }
 
   if (req.method === "OPTIONS") {
@@ -107,16 +109,16 @@ serve(async (req: Request) => {
 
     // 2. Identify existing states
     let authUser = null;
-    const { data: authLookupData, error: authLookupError } = await supabaseAdmin.auth.admin.getUserByEmail(cleanEmail);
+    const { data: authLookupData, error: authLookupError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (authLookupError && authLookupError.status !== 404) {
+    if (authLookupError) {
       console.error("[ACTIVATION] Auth lookup error:", authLookupError.message);
       return new Response(
         JSON.stringify({ success: false, error: "Authentication service lookup failed." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    authUser = authLookupData?.user || null;
+    authUser = authLookupData?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === cleanEmail) || null;
 
     const { data: dbUser, error: dbUserError } = await supabaseAdmin
       .from("users")
@@ -148,133 +150,114 @@ serve(async (req: Request) => {
 
     // Resolve Statuses
     const { data: statuses } = await supabaseAdmin.from("account_statuses").select("id, name");
-    const pendingStatusId = statuses?.find(s => s.name === "Pending Activation")?.id;
     const activeStatusId = statuses?.find(s => s.name === "Active")?.id;
 
     const hasAuth = authUser !== null;
     const hasDbUser = dbUser !== null;
     const hasDbStudent = dbStudent !== null;
-    const isConfirmed = !!(authUser?.email_confirmed_at || authUser?.confirmed_at);
-    const isPendingStatus = dbUser?.account_status_id === pendingStatusId;
-    const isActiveStatus = dbUser?.account_status_id === activeStatusId;
 
-    console.log(`[ACTIVATION] State Trace: hasAuth=${hasAuth}, hasDbUser=${hasDbUser}, hasDbStudent=${hasDbStudent}, isConfirmed=${isConfirmed}, isPending=${isPendingStatus}`);
+    console.log(`[ACTIVATION] State Trace: hasAuth=${hasAuth}, hasDbUser=${hasDbUser}, hasDbStudent=${hasDbStudent}`);
 
-    // STATE B: EXISTING PENDING ACTIVATION - RECOVERY
-    if (hasAuth && hasDbUser && hasDbStudent && !isConfirmed && isPendingStatus) {
-      console.log("[ACTIVATION] Case: Recovery (State B)");
-      const { error: resendError } = await supabaseAdmin.auth.resend({ type: "signup", email: cleanEmail });
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: resendError 
-            ? "Your account is already awaiting email verification. However, we had trouble sending a new verification link. Please request a link from the login page or contact support."
-            : "Your account is already awaiting email verification. We have sent a new verification link to your email address. Please verify your email before signing in."
-        }),
-        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // STATE C: EXISTING ACTIVE ACCOUNT
-    if (hasAuth && hasDbUser && hasDbStudent && (isConfirmed || isActiveStatus)) {
-      console.log("[ACTIVATION] Case: Active (State C)");
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Your account is already active. Please proceed to the login page to sign in.",
-        }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // STATE D: PARTIAL / INCONSISTENT
-    if (hasAuth || hasDbUser || hasDbStudent) {
-      console.warn("[ACTIVATION] Case: Inconsistent (State D)");
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "An account registration is already in progress or partially completed. Please contact support to resolve this status.",
-        }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // STATE A: FRESH PROVISIONING
-    console.log("[ACTIVATION] Case: Fresh (State A)");
-    
     const { data: roleData } = await supabaseAdmin.from("roles").select("id").eq("name", "student").single();
     const { data: electionData } = await supabaseAdmin.from("elections").select("academic_session_id").eq("id", regStudent.election_id).single();
 
-    if (!roleData || !electionData || !pendingStatusId) {
+    if (!roleData || !electionData || !activeStatusId) {
        return new Response(JSON.stringify({ success: false, error: "Application configuration error." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Provision
-    const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
-      email: cleanEmail,
-      password: password,
-      email_confirm: false,
-      user_metadata: { role: "student", matriculation_number: cleanMatric },
-    });
+    let authUserId = "";
 
-    if (authCreateError || !authData.user) {
-      console.error("[ACTIVATION] Auth create error:", authCreateError?.message);
-      return new Response(JSON.stringify({ success: false, error: "Failed to establish authentication record." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // UNIFIED SELF-HEALING REGISTRATION AND PASSWORD RESET FLOW
+    if (hasAuth) {
+      authUserId = authUser.id;
+      console.log(`[ACTIVATION] Self-healing / Updating existing user ID: ${authUserId}`);
+      
+      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(authUserId, {
+        password: password,
+        email_confirm: true,
+        user_metadata: { role: "student", matriculation_number: cleanMatric },
       });
+
+      if (authUpdateError) {
+        console.error("[ACTIVATION] Auth update error:", authUpdateError.message);
+        return new Response(JSON.stringify({ success: false, error: "Failed to update authentication record." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      console.log(`[ACTIVATION] Fresh provisioning for email: ${cleanEmail}`);
+      
+      const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
+        email: cleanEmail,
+        password: password,
+        email_confirm: true,
+        user_metadata: { role: "student", matriculation_number: cleanMatric },
+      });
+
+      if (authCreateError || !authData.user) {
+        console.error("[ACTIVATION] Auth create error:", authCreateError?.message);
+        return new Response(JSON.stringify({ success: false, error: "Failed to establish authentication record." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      authUserId = authData.user.id;
     }
 
-    const authUserId = authData.user.id;
-
-    const { error: userInsertError } = await supabaseAdmin.from("users").insert({
+    // Upsert public.users application record with Active status
+    const { error: userInsertError } = await supabaseAdmin.from("users").upsert({
       id: authUserId,
       email: cleanEmail,
       role_id: roleData.id,
-      account_status_id: pendingStatusId,
+      account_status_id: activeStatusId,
+      updated_at: new Date().toISOString(),
     });
 
     if (userInsertError) {
-      console.error("[ACTIVATION] User insert error, compensating cleanup:", userInsertError.message);
-      await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      console.error("[ACTIVATION] User insert/upsert error, compensating cleanup:", userInsertError.message);
+      if (!hasAuth) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       return new Response(JSON.stringify({ success: false, error: "Failed to establish application user record." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { error: studentInsertError } = await supabaseAdmin.from("students").insert({
+    // Upsert public.students record
+    const { error: studentInsertError } = await supabaseAdmin.from("students").upsert({
       user_id: authUserId,
       matriculation_number: cleanMatric,
       department_id: regStudent.department_id,
       level_id: regStudent.level_id,
       academic_session_id: electionData.academic_session_id,
+    }, {
+      onConflict: "user_id",
     });
 
     if (studentInsertError) {
-      console.error("[ACTIVATION] Student insert error, compensating cleanup:", studentInsertError.message);
-      await supabaseAdmin.from("users").delete().eq("id", authUserId);
-      await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      console.error("[ACTIVATION] Student insert/upsert error, compensating cleanup:", studentInsertError.message);
+      if (!hasAuth) {
+        await supabaseAdmin.from("users").delete().eq("id", authUserId);
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       return new Response(JSON.stringify({ success: false, error: "Failed to establish student profile record." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { error: resendError } = await supabaseAdmin.auth.resend({ type: "signup", email: cleanEmail });
-
     return new Response(
       JSON.stringify({
         success: true,
-        message: resendError 
-          ? "Profile provisioned successfully! However, we had trouble sending the confirmation email. Please request a verification link from the login page."
-          : "Activation initiated! A confirmation email has been sent to your institutional email. Please verify your email before signing in."
+        message: "Account successfully activated! You can now log in immediately with your email and password.",
+        user_id: authUserId,
       }),
-      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (err) {

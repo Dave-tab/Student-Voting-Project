@@ -168,24 +168,29 @@ export async function transitionElectionStatus(
     throw new Error("Published elections are immutable and cannot transition to another status.");
   }
 
-  // Block invalid backward lifecycle transitions (OD-10.1)
+  // Block invalid backward lifecycle transitions and arbitrary stage jumps (OD-10.1, Package Sec 16)
   const lifecycleOrder = ["Draft", "Scheduled", "Open", "Closed", "Published"];
   const currentIndex = lifecycleOrder.indexOf(currentStatusName);
   const targetIndex = lifecycleOrder.indexOf(targetStatusName);
 
-  if (currentIndex !== -1 && targetIndex !== -1 && targetIndex < currentIndex) {
-    throw new Error(`Backward lifecycle transition from ${currentStatusName} to ${targetStatusName} is strictly prohibited (OD-10.1).`);
-  }
-
-  // Enforce readiness check when transitioning Draft -> Scheduled (OD-10.2)
-  if (currentStatusName === "Draft" && targetStatusName === "Scheduled") {
-    const readiness = await checkElectionReadiness(electionId);
-    if (!readiness.ready) {
-      throw new Error(`Cannot schedule election due to readiness issues: ${readiness.issues.join(" ")}`);
+  if (currentIndex !== -1 && targetIndex !== -1) {
+    if (targetIndex < currentIndex) {
+      throw new Error(`Backward lifecycle transition from ${currentStatusName} to ${targetStatusName} is strictly prohibited (OD-10.1).`);
+    }
+    if (targetIndex > currentIndex + 1) {
+      throw new Error(`Arbitrary lifecycle skip from ${currentStatusName} to ${targetStatusName} is prohibited. Lifecycle must follow: Draft -> Scheduled -> Open -> Closed -> Published.`);
     }
   }
 
-  // Validate Scheduled -> Open timing
+  // Enforce readiness check when transitioning into Scheduled or Open (OD-10.2, Package Sec 17)
+  if (targetStatusName === "Scheduled" || targetStatusName === "Open") {
+    const readiness = await checkElectionReadiness(electionId);
+    if (!readiness.ready) {
+      throw new Error(`Cannot advance election to ${targetStatusName} due to readiness issues: ${readiness.issues.join(" ")}`);
+    }
+  }
+
+  // Validate Open timing
   if (targetStatusName === "Open") {
     const now = new Date();
     const startTime = new Date(election?.start_datetime || "");

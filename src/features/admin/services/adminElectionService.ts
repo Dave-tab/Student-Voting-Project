@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Database } from "@/types/database.types";
+import type { Database, Json } from "@/types/database.types";
 import type { AdminElection, LookupStatus } from "../types";
 
 type ElectionUpdate = Database["public"]["Tables"]["elections"]["Update"];
@@ -376,3 +376,58 @@ export async function getRecentActivity(): Promise<AdminRecentActivity[]> {
 
   return (data || []) as AdminRecentActivity[];
 }
+
+/**
+ * Deletes an election if it is in Draft status.
+ * Per Security Rules: Deletion is restricted to Draft elections only.
+ */
+export async function deleteAdminElection(electionId: string): Promise<void> {
+  // First, verify that the election is in Draft status
+  const { data: election, error: lookupError } = await supabase
+    .from("elections")
+    .select("election_status_id, election_statuses(name)")
+    .eq("id", electionId)
+    .maybeSingle();
+
+  if (lookupError || !election) {
+    throw new Error("Election not found.");
+  }
+
+  const statusObj = Array.isArray(election.election_statuses)
+    ? election.election_statuses[0]
+    : election.election_statuses;
+  const statusName = statusObj?.name || "Draft";
+
+  if (statusName.toLowerCase() !== "draft") {
+    throw new Error("Prohibited: Only elections in 'Draft' status can be deleted.");
+  }
+
+  // Clean up configurations linked specifically to this draft election
+  // 1. Clean up student_register via the import_student_register security definer RPC
+  const { error: registerRpcError } = await supabase.rpc("import_student_register", {
+    p_election_id: electionId,
+    p_students: [] as unknown as Json,
+  });
+
+  if (registerRpcError) {
+    throw new Error(`Failed to clear voter register: ${registerRpcError.message}`);
+  }
+
+  // 2. Clean up election officer assignments linked specifically to this draft election
+  await supabase.from("election_officer_assignments").delete().eq("election_id", electionId);
+
+  // 3. Clean up candidates and positions
+  await supabase.from("candidates").delete().eq("election_id", electionId);
+  await supabase.from("positions").delete().eq("election_id", electionId);
+
+  // Delete the election itself
+  const { error: deleteError } = await supabase
+    .from("elections")
+    .delete()
+    .eq("id", electionId);
+
+  if (deleteError) {
+    throw new Error(`Failed to delete election: ${deleteError.message}`);
+  }
+}
+

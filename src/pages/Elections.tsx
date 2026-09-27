@@ -52,6 +52,12 @@ export default function Elections() {
   const [matricNumber, setMatricNumber] = useState<string | null>(null);
 
   const [refreshIndex, setRefreshIndex] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -206,7 +212,7 @@ export default function Elections() {
           {elections.map((election) => {
             const status = getElectionStatus(election);
             const badgeConfig = getElectionStatusBadgeConfig(status);
-            const countdownText = getPresentationCountdown(election);
+            const countdownText = getPresentationCountdown(election, now);
 
             return (
               <Card

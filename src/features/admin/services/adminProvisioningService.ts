@@ -103,3 +103,91 @@ export async function provisionAdminAccount(
     };
   }
 }
+
+export interface AdministrativeAccount {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  assignedElections: { id: string; name: string }[];
+}
+
+/**
+ * Fetches all non-student administrative users and their assigned elections.
+ * Restricted to Super Admins.
+ */
+export async function getAdministrativeAccounts(): Promise<AdministrativeAccount[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select(`
+      id,
+      email,
+      roles ( id, name ),
+      account_statuses ( id, name )
+    `);
+
+  if (error) {
+    throw new Error(`Failed to load administrative accounts: ${error.message}`);
+  }
+
+  interface AdminQueryRow {
+    id: string;
+    email: string;
+    roles?: { id?: string; name?: string } | { id?: string; name?: string }[] | null;
+    account_statuses?: { id?: string; name?: string } | { id?: string; name?: string }[] | null;
+  }
+
+  interface AssignmentQueryRow {
+    election_id: string;
+    elections?: { id?: string; name?: string } | { id?: string; name?: string }[] | null;
+  }
+
+  const allUsers = (data || []) as unknown as AdminQueryRow[];
+
+  const adminUsers = allUsers.filter((u) => {
+    const roleObj = Array.isArray(u.roles) ? u.roles[0] : u.roles;
+    const roleName = roleObj?.name || "student";
+    return roleName.toLowerCase() !== "student";
+  });
+
+  const enriched = await Promise.all(
+    adminUsers.map(async (u) => {
+      const roleObj = Array.isArray(u.roles) ? u.roles[0] : u.roles;
+      const statusObj = Array.isArray(u.account_statuses) ? u.account_statuses[0] : u.account_statuses;
+
+      let assignments: { id: string; name: string }[] = [];
+      if (roleObj?.name?.toLowerCase() === "electoral_officer") {
+        const { data: assignData } = await supabase
+          .from("election_officer_assignments")
+          .select(`
+            election_id,
+            elections ( id, name )
+          `)
+          .eq("user_id", u.id);
+
+        if (assignData) {
+          assignments = (assignData as unknown as AssignmentQueryRow[])
+            .map((a) => {
+              const el = Array.isArray(a.elections) ? a.elections[0] : a.elections;
+              return {
+                id: el?.id || a.election_id || "",
+                name: el?.name || "Assigned Election",
+              };
+            })
+            .filter((el) => el.id);
+        }
+      }
+
+      return {
+        id: u.id,
+        email: u.email,
+        role: roleObj?.name || "administrator",
+        status: statusObj?.name || "Active",
+        assignedElections: assignments,
+      };
+    })
+  );
+
+  return enriched;
+}
+

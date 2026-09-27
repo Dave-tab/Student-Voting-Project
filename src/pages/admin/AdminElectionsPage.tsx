@@ -9,6 +9,7 @@ import {
   createAdminElection,
   getElectionStatuses,
   getAcademicSessions,
+  deleteAdminElection,
   type LookupAcademicSession,
 } from "@/features/admin/services/adminElectionService";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
@@ -27,6 +28,7 @@ import {
   CheckCircle2,
   Globe,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import {
   formatElectionDateWAT,
@@ -50,6 +52,29 @@ export default function AdminElectionsPage() {
   const [step, setStep] = useState<"configure" | "review">("configure");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Deletion state
+  const [deletingElection, setDeletingElection] = useState<AdminElection | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteElection = async () => {
+    if (!deletingElection) return;
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+      await deleteAdminElection(deletingElection.id);
+      setShowDeleteConfirm(false);
+      setDeletingElection(null);
+      await loadData();
+    } catch (err) {
+      console.error("Failed to delete election:", err);
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete election.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   // Dynamic default schedule evaluated from current time
   const defaultSchedule = getDefaultElectionScheduleWAT();
@@ -367,14 +392,31 @@ export default function AdminElectionsPage() {
                   </div>
                 </div>
 
-                <Button
-                  onClick={() => navigate(`/admin/elections/${election.id}`)}
-                  className="w-full text-xs font-semibold gap-1.5"
-                  size="sm"
-                >
-                  <span>Manage Election</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex flex-col gap-2 pt-1.5">
+                  <Button
+                    onClick={() => navigate(`/admin/elections/${election.id}`)}
+                    className="w-full text-xs font-semibold gap-1.5"
+                    size="sm"
+                  >
+                    <span>Manage Election</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                  {election.status_name.toLowerCase() === "draft" && (
+                    <Button
+                      onClick={() => {
+                        setDeletingElection(election);
+                        setDeleteError(null);
+                        setShowDeleteConfirm(true);
+                      }}
+                      variant="outline"
+                      className="w-full text-xs font-semibold gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 dark:hover:bg-red-950/20"
+                      size="sm"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete Draft</span>
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -645,6 +687,71 @@ export default function AdminElectionsPage() {
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+      )}
+      {/* Delete Draft Election Confirmation Modal */}
+      {showDeleteConfirm && deletingElection && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-background/80 backdrop-blur-xs p-4 py-8 overflow-y-auto">
+          <Card className="w-full max-w-md border-border shadow-xl my-auto">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-lg font-bold text-red-600 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                <span>Delete Draft Election?</span>
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                This action is permanent and cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4 text-xs">
+              {deleteError && (
+                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-xs border border-destructive/20 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                Are you sure you want to delete the draft election <strong className="text-foreground">"{deletingElection.name}"</strong>?
+              </p>
+              
+              <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3.5 space-y-1.5 text-[11px] text-red-700 dark:text-red-400 leading-normal">
+                <p className="font-bold flex items-center gap-1">
+                  <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                  <span>The following dependent configurations will be deleted:</span>
+                </p>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  <li>Election record details</li>
+                  <li>All configured elective positions</li>
+                  <li>All candidate applications/approvals associated with this election</li>
+                  <li>All matching records in the election-specific student register</li>
+                </ul>
+              </div>
+            </CardContent>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletingElection(null);
+                }}
+                disabled={deleteLoading}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteElection}
+                disabled={deleteLoading}
+                className="text-xs font-semibold gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>{deleteLoading ? "Deleting..." : "Delete Permanently"}</span>
+              </Button>
+            </div>
           </Card>
         </div>
       )}

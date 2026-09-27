@@ -1,17 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/Table";
 import {
   UserPlus,
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Users,
+  Shield,
 } from "lucide-react";
-import { provisionAdminAccount } from "@/features/admin/services/adminProvisioningService";
+import {
+  provisionAdminAccount,
+  getAdministrativeAccounts,
+  type AdministrativeAccount,
+} from "@/features/admin/services/adminProvisioningService";
 
 export default function AdminSuperAdminOversight() {
   const [email, setEmail] = useState("");
@@ -20,6 +27,51 @@ export default function AdminSuperAdminOversight() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [provisionSuccess, setProvisionSuccess] = useState<string | null>(null);
   const [provisionError, setProvisionError] = useState<string | null>(null);
+
+  const [admins, setAdmins] = useState<AdministrativeAccount[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(true);
+  const [adminsError, setAdminsError] = useState<string | null>(null);
+
+  const loadAdmins = async () => {
+    try {
+      setLoadingAdmins(true);
+      setAdminsError(null);
+      const data = await getAdministrativeAccounts();
+      setAdmins(data);
+    } catch (err) {
+      console.error("Failed to load administrators:", err);
+      setAdminsError(err instanceof Error ? err.message : "Failed to load administrative accounts.");
+    } finally {
+      setLoadingAdmins(false);
+    }
+  };
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchAdmins = async () => {
+      try {
+        setLoadingAdmins(true);
+        setAdminsError(null);
+        const data = await getAdministrativeAccounts();
+        if (!ignore) {
+          setAdmins(data);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Failed to load administrators:", err);
+          setAdminsError(err instanceof Error ? err.message : "Failed to load administrative accounts.");
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingAdmins(false);
+        }
+      }
+    };
+    fetchAdmins();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleProvision = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,11 +106,25 @@ export default function AdminSuperAdminOversight() {
       );
       setEmail("");
       setPassword("");
+      await loadAdmins(); // Refresh the list after provisioning
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
       setProvisionError(msg);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const getRoleBadgeVariant = (roleName: string) => {
+    switch (roleName.toLowerCase()) {
+      case "super_admin":
+        return "destructive";
+      case "admin":
+        return "default";
+      case "administrator":
+        return "secondary";
+      default:
+        return "secondary";
     }
   };
 
@@ -119,7 +185,7 @@ export default function AdminSuperAdminOversight() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="adminEmail" className="text-xs">
+                <Label htmlFor="adminEmail" className="text-xs font-semibold">
                   Officer / Admin Email <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -135,7 +201,7 @@ export default function AdminSuperAdminOversight() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="adminPassword" className="text-xs">
+                <Label htmlFor="adminPassword" className="text-xs font-semibold">
                   Temporary Password <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -151,7 +217,7 @@ export default function AdminSuperAdminOversight() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="adminRole" className="text-xs">
+                <Label htmlFor="adminRole" className="text-xs font-semibold">
                   Administrative Role <span className="text-destructive">*</span>
                 </Label>
                 <select
@@ -185,7 +251,93 @@ export default function AdminSuperAdminOversight() {
         </form>
       </Card>
 
+      {/* Administrative Accounts Table */}
+      <Card className="border border-border bg-card shadow-xs">
+        <CardHeader className="pb-3 border-b border-border/60">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base font-bold text-foreground">
+              Administrative Accounts
+            </CardTitle>
+          </div>
+          <CardDescription className="text-xs text-muted-foreground">
+            Current active, pending, or suspended system administrators and their specific election scopes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          {adminsError && (
+            <div className="p-4">
+              <Alert variant="error">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error Loading Administrators</AlertTitle>
+                <AlertDescription className="text-xs">{adminsError}</AlertDescription>
+              </Alert>
+            </div>
+          )}
 
+          {loadingAdmins ? (
+            <div className="p-12 text-center text-xs text-muted-foreground animate-pulse">
+              Loading administrative roster details...
+            </div>
+          ) : admins.length === 0 ? (
+            <div className="p-12 text-center text-xs text-muted-foreground">
+              No administrative accounts registered on this platform.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs font-bold text-muted-foreground">Email Address</TableHead>
+                    <TableHead className="text-xs font-bold text-muted-foreground">Designated Role</TableHead>
+                    <TableHead className="text-xs font-bold text-muted-foreground">Account Status</TableHead>
+                    <TableHead className="text-xs font-bold text-muted-foreground">Presiding Assignments</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {admins.map((admin) => (
+                    <TableRow key={admin.id} className="hover:bg-muted/30">
+                      <TableCell className="text-xs font-semibold font-mono text-foreground">
+                        {admin.email}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getRoleBadgeVariant(admin.role)} className="text-[10px] font-semibold uppercase tracking-wider">
+                          {admin.role.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={admin.status === "Active" ? "success" : "secondary"} className="text-[10px] font-semibold">
+                          {admin.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {admin.role.toLowerCase() === "electoral_officer" ? (
+                          admin.assignedElections.length === 0 ? (
+                            <span className="text-amber-500 font-medium">No assigned elections</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {admin.assignedElections.map((el) => (
+                                <Badge key={el.id} variant="secondary" className="text-[10px] font-medium max-w-[180px] truncate">
+                                  {el.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )
+                        ) : (
+                          <span className="italic text-muted-foreground/60 flex items-center gap-1">
+                            <Shield className="h-3 w-3 shrink-0" />
+                            <span>Global Platform Access</span>
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -860,6 +860,16 @@ export interface Database {
         };
         Returns: Json;
       };
+      submit_candidate_application: {
+        Args: {
+          p_election_id: string;
+          p_position_id: string;
+          p_campaign_slogan: string | null;
+          p_manifesto: string | null;
+          p_photo_path: string | null;
+        };
+        Returns: Json;
+      };
     };
   };
 }
