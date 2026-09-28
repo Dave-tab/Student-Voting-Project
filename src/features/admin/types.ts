@@ -106,6 +106,10 @@ export interface AdminCandidate {
   candidate_status_id: string;
   status_name: string;
   manifesto: string | null;
+  campaign_slogan: string | null;
+  photo_path: string | null;
+  approval_remarks: string | null;
+  withdrawal_reason: string | null;
   created_at: string;
   updated_at: string;
 }

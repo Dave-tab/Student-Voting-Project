@@ -191,68 +191,26 @@ interface RawCandidateRow {
  * Only candidates with status 'Approved' (or active) are returned.
  */
 export async function getApprovedCandidates(electionId: string): Promise<Candidate[]> {
-  const { data, error } = await supabase
-    .from("candidates")
-    .select(
-      `
-      id,
-      election_id,
-      position_id,
-      student_id,
-      candidate_status_id,
-      candidate_statuses ( id, name ),
-      candidate_details (
-        manifesto
-      ),
-      students (
-        id,
-        matriculation_number
-      )
-    `
-    )
-    .eq("election_id", electionId);
-
-  if (error) {
-    // If nested join fails on some legacy relation, try simple select
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from("candidates")
-      .select("*")
-      .eq("election_id", electionId);
-
-    if (fallbackError) {
-      throw new Error(`Failed to fetch candidates: ${fallbackError.message}`);
-    }
-
-    const fallbackRows = (fallbackData as unknown as RawCandidateRow[]) || [];
-    return fallbackRows.map((row) => ({
-      id: row.id,
-      election_id: row.election_id,
-      position_id: row.position_id,
-      student_id: row.student_id,
-      status_id: row.candidate_status_id || row.status_id,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }));
-  }
-
-  const rawCandidates = (data as unknown as RawCandidateRow[]) || [];
-
-  // Filter for approved candidates only (aligned with submit_ballot RPC)
-  const approvedCandidates = rawCandidates.filter((row) => {
-    const statusName =
-      row.candidate_statuses?.name ||
-      (typeof row.status === "string" ? row.status : null);
-    return statusName?.toLowerCase() === "approved";
+  const { data, error } = await supabase.rpc("get_approved_election_candidates", {
+    p_election_id: electionId,
   });
 
-  return approvedCandidates.map((row) => ({
+  if (error) {
+    throw new Error(`Failed to fetch approved candidates: ${error.message}`);
+  }
+
+  const rawRows = (data as unknown as RawCandidateRow[]) || [];
+  return rawRows.map((row) => ({
     id: row.id,
     election_id: row.election_id,
     position_id: row.position_id,
     student_id: row.student_id,
     status_id: row.status_id,
-    status: row.candidate_statuses || undefined,
-    student: row.students,
+    status: row.status || undefined,
+    student: row.students ? {
+      ...row.students,
+      matric_number: row.students.matriculation_number
+    } : null,
     candidate_details: Array.isArray(row.candidate_details)
       ? row.candidate_details[0]
       : row.candidate_details,
@@ -260,6 +218,32 @@ export async function getApprovedCandidates(electionId: string): Promise<Candida
     updated_at: row.updated_at,
   }));
 }
+
+export async function resubmitCandidateApplication(params: {
+  candidateId: string;
+  campaignSlogan?: string;
+  manifesto?: string;
+  photoPath?: string;
+}): Promise<{ success: boolean; message: string }> {
+  const { data, error } = await supabase.rpc("resubmit_candidate_application", {
+    p_candidate_id: params.candidateId,
+    p_campaign_slogan: params.campaignSlogan?.trim() || null,
+    p_manifesto: params.manifesto?.trim() || null,
+    p_photo_path: params.photoPath?.trim() || null,
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to resubmit candidate application.");
+  }
+
+  const result = data as { success: boolean; message: string };
+  return {
+    success: result.success,
+    message: result.message || "Candidate application resubmitted successfully.",
+  };
+}
+
+
 
 export interface StudentProfileData {
   matricNumber: string;

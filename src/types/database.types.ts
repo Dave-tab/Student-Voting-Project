@@ -870,6 +870,21 @@ export interface Database {
         };
         Returns: Json;
       };
+      get_approved_election_candidates: {
+        Args: {
+          p_election_id: string;
+        };
+        Returns: Json;
+      };
+      resubmit_candidate_application: {
+        Args: {
+          p_candidate_id: string;
+          p_campaign_slogan: string | null;
+          p_manifesto: string | null;
+          p_photo_path: string | null;
+        };
+        Returns: Json;
+      };
     };
   };
 }

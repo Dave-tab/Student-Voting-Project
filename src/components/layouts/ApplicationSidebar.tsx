@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import { isAdministrativeRole } from "@/features/admin/types";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Vote, ShieldCheck, User, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Vote, ShieldCheck, User, ShieldAlert, Award } from "lucide-react";
 
 export type ApplicationSidebarProps = HTMLAttributes<HTMLElement>;
 
@@ -94,6 +94,18 @@ function ApplicationSidebar({ className, ...props }: ApplicationSidebarProps) {
             >
               <ShieldAlert className="h-4 w-4" />
               Administration
+            </NavLink>
+            <NavLink
+              to="/admin/elections"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary hover:bg-primary/10",
+                  isActive ? "bg-primary/15 font-semibold" : ""
+                )
+              }
+            >
+              <Award className="h-4 w-4" />
+              Candidate Vetting
             </NavLink>
           </div>
         )}

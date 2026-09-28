@@ -165,11 +165,15 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
         
         let candidateName = "Candidate";
         if (studentInfo) {
-          const names = [studentInfo.first_name, studentInfo.last_name].filter(Boolean);
-          if (names.length > 0) {
-            candidateName = names.join(" ");
-          } else if (studentInfo.matric_number) {
-            candidateName = `Candidate (${studentInfo.matric_number})`;
+          if (studentInfo.full_name) {
+            candidateName = studentInfo.full_name;
+          } else {
+            const names = [studentInfo.first_name, studentInfo.last_name].filter(Boolean);
+            if (names.length > 0) {
+              candidateName = names.join(" ");
+            } else if (studentInfo.matriculation_number) {
+              candidateName = `Candidate (${studentInfo.matriculation_number})`;
+            }
           }
         }
 
@@ -177,7 +181,7 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
           candidate_id: c.candidate_id,
           candidate_name: candidateName,
           department: studentInfo?.department || null,
-          matric_number: studentInfo?.matric_number || null,
+          matriculation_number: studentInfo?.matriculation_number || null,
           photo_path: candidateMeta?.candidate_details?.photo_path || null,
           votes: c.votes,
           percentage: c.percentage,

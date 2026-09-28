@@ -544,11 +544,10 @@ export default function ElectionDetails() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {posCandidates.map((candidate) => {
                         const candidateName = candidate.student
-                          ? `${candidate.student.first_name || ""} ${
-                              candidate.student.last_name || ""
-                            }`.trim() ||
-                            candidate.student.matric_number ||
-                            "Candidate"
+                          ? (candidate.student.full_name || 
+                             `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
+                             candidate.student.matriculation_number ||
+                             "Candidate")
                           : "Candidate";
 
                         const initials = candidateName
@@ -582,9 +581,9 @@ export default function ElectionDetails() {
                                 <CardTitle className="text-base font-bold text-foreground truncate">
                                   {candidateName}
                                 </CardTitle>
-                                {candidate.student?.matric_number && (
+                                {candidate.student?.matriculation_number && (
                                   <p className="text-xs font-mono text-muted-foreground">
-                                    {candidate.student.matric_number}
+                                    {candidate.student.matriculation_number}
                                   </p>
                                 )}
                                 {(candidate.student?.department ||
@@ -657,23 +656,25 @@ export default function ElectionDetails() {
                   )}
                   <AvatarFallback className="font-bold text-lg">
                     {selectedCandidate.student
-                      ? `${selectedCandidate.student.first_name || ""} ${
-                          selectedCandidate.student.last_name || ""
-                        }`
-                          .trim()
+                      ? (selectedCandidate.student.full_name || 
+                         `${selectedCandidate.student.first_name || ""} ${selectedCandidate.student.last_name || ""}`.trim() ||
+                         selectedCandidate.student.matriculation_number ||
+                         "C")
+                          .split(" ")
+                          .map((n) => n[0])
                           .slice(0, 2)
-                          .toUpperCase() || "C"
+                          .join("")
+                          .toUpperCase()
                       : "C"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <DialogTitle className="text-xl font-bold">
                     {selectedCandidate.student
-                      ? `${selectedCandidate.student.first_name || ""} ${
-                          selectedCandidate.student.last_name || ""
-                        }`.trim() ||
-                        selectedCandidate.student.matric_number ||
-                        "Candidate"
+                      ? (selectedCandidate.student.full_name ||
+                         `${selectedCandidate.student.first_name || ""} ${selectedCandidate.student.last_name || ""}`.trim() ||
+                         selectedCandidate.student.matriculation_number ||
+                         "Candidate")
                       : "Candidate"}
                   </DialogTitle>
                   <DialogDescription className="text-xs mt-1">
@@ -703,11 +704,11 @@ export default function ElectionDetails() {
                     {selectedCandidate.student?.level || "N/A"}
                   </span>
                 </div>
-                {selectedCandidate.student?.matric_number && (
+                {selectedCandidate.student?.matriculation_number && (
                   <div>
                     <span className="text-muted-foreground block">Matric Number</span>
                     <span className="font-mono text-foreground font-semibold">
-                      {selectedCandidate.student.matric_number}
+                      {selectedCandidate.student.matriculation_number}
                     </span>
                   </div>
                 )}

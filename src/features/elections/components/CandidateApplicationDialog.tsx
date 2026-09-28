@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Position } from "../types";
 import { submitCandidateApplication } from "../services/electionService";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/Alert";
-import { Award, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Award, AlertCircle, CheckCircle2, ShieldCheck, Upload } from "lucide-react";
 
 interface CandidateApplicationDialogProps {
   isOpen: boolean;
@@ -40,9 +41,34 @@ export function CandidateApplicationDialog({
   const [campaignSlogan, setCampaignSlogan] = useState("");
   const [manifesto, setManifesto] = useState("");
   const [photoPath, setPhotoPath] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate MIME type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setError("Invalid file type. Please upload a JPEG, PNG, or WEBP image.");
+      return;
+    }
+
+    // Validate file size (Max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError("File size exceeds 5MB limit. Please choose a smaller image.");
+      return;
+    }
+
+    setError(null);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +82,31 @@ export function CandidateApplicationDialog({
       setError(null);
       setSuccessMsg(null);
 
+      let finalPhotoPath = photoPath.trim();
+
+      // If a file is selected, upload to candidate-media bucket securely
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split(".").pop();
+        const fileName = `${electionId}/${studentId}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("candidate-media")
+          .upload(fileName, selectedFile, {
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw new Error(`Media upload failed: ${uploadError.message}`);
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("candidate-media")
+          .getPublicUrl(fileName);
+
+        finalPhotoPath = publicUrlData.publicUrl;
+      }
+
       const res = await submitCandidateApplication({
         electionId,
         positionId,
@@ -63,7 +114,7 @@ export function CandidateApplicationDialog({
         matricNumber,
         campaignSlogan,
         manifesto,
-        photoPath,
+        photoPath: finalPhotoPath,
       });
 
       setSuccessMsg(res.message);
@@ -163,17 +214,52 @@ export function CandidateApplicationDialog({
             />
           </div>
 
-          {/* Candidate Photograph Path / URL */}
-          <div className="space-y-1.5">
+          {/* Candidate Photograph Upload & Validation */}
+          <div className="space-y-2">
             <label className="text-xs font-semibold text-foreground block">
-              Candidate Photograph URL
+              Candidate Photograph (JPEG, PNG, WEBP &bull; Max 5MB)
             </label>
-            <Input
-              value={photoPath}
-              onChange={(e) => setPhotoPath(e.target.value)}
-              placeholder="https://... or /images/candidates/..."
-              className="h-9 text-xs"
-            />
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-md border border-border bg-muted/40 hover:bg-muted text-xs font-medium text-foreground transition-colors">
+                <Upload className="h-3.5 w-3.5 text-primary" />
+                <span>Choose Image File</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+              {selectedFile ? (
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  {selectedFile.name}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">
+                  No file chosen (or provide URL below)
+                </span>
+              )}
+            </div>
+
+            {previewUrl && (
+              <div className="mt-2 flex items-center gap-3 p-2 rounded border border-border bg-muted/20">
+                <img
+                  src={previewUrl}
+                  alt="Candidate Preview"
+                  className="h-12 w-12 rounded object-cover border border-border"
+                />
+                <span className="text-[11px] text-muted-foreground">Preview Image Ready</span>
+              </div>
+            )}
+
+            <div className="pt-1">
+              <Input
+                value={photoPath}
+                onChange={(e) => setPhotoPath(e.target.value)}
+                placeholder="Or paste external image URL..."
+                className="h-8 text-xs font-mono"
+              />
+            </div>
           </div>
 
           {/* Manifesto / Vision */}

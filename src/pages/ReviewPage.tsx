@@ -294,14 +294,25 @@ export default function ReviewPage() {
                               src={candidate.candidate_details.photo_path}
                               alt={
                                 candidate.student
-                                  ? `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim()
+                                  ? (candidate.student.full_name || 
+                                     `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
+                                     candidate.student.matriculation_number ||
+                                     "Candidate")
                                   : "Candidate"
-                              }
+                               }
                             />
                           )}
                           <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                             {candidate.student
-                              ? `${candidate.student.first_name?.[0] || ""}${candidate.student.last_name?.[0] || ""}`
+                              ? (candidate.student.full_name || 
+                                 `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
+                                 candidate.student.matriculation_number ||
+                                 "C")
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .slice(0, 2)
+                                  .join("")
+                                  .toUpperCase()
                               : "C"}
                           </AvatarFallback>
                         </Avatar>
@@ -309,12 +320,15 @@ export default function ReviewPage() {
                         <div className="min-w-0 pr-2">
                           <p className="text-xs font-semibold text-foreground truncate">
                             {candidate.student
-                              ? `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim()
+                              ? (candidate.student.full_name || 
+                                 `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
+                                 candidate.student.matriculation_number ||
+                                 "Candidate")
                               : "Candidate Name"}
                           </p>
-                          {candidate.student?.matric_number && (
+                          {candidate.student?.matriculation_number && (
                             <p className="text-[11px] font-mono text-muted-foreground">
-                              {candidate.student.matric_number}
+                              {candidate.student.matriculation_number}
                             </p>
                           )}
                         </div>

@@ -148,11 +148,11 @@ export function PositionResultCard({ position, positionNumber }: PositionResultC
                           )}
                         </div>
 
-                        {(cand.department || cand.matric_number) && (
+                        {(cand.department || cand.matriculation_number) && (
                           <div className="text-xs text-muted-foreground">
                             {cand.department && <span>{cand.department}</span>}
-                            {cand.department && cand.matric_number && <span> &bull; </span>}
-                            {cand.matric_number && <span>{cand.matric_number}</span>}
+                            {cand.department && cand.matriculation_number && <span> &bull; </span>}
+                            {cand.matriculation_number && <span>{cand.matriculation_number}</span>}
                           </div>
                         )}
                       </div>

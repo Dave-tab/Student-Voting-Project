@@ -49,8 +49,10 @@ export default function AdminElectionManagePage() {
   const superAdmin = isSuperAdmin(user?.role);
   const electoralOfficer = isElectoralOfficer(user?.role);
 
+  const isValidUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
   const loadData = async () => {
-    if (!id) return;
+    if (!id || !isValidUuid(id)) return;
     try {
       setLoading(true);
       setError(null);
@@ -74,14 +76,24 @@ export default function AdminElectionManagePage() {
   };
 
   useEffect(() => {
-    if (!id) return;
     let ignore = false;
 
-    Promise.all([
-      getAdminElectionById(id),
-      getElectionStatuses(),
-    ])
-      .then(([electionData, statusesData]) => {
+    async function fetchData() {
+      if (!id || !isValidUuid(id)) {
+        if (!ignore) {
+          setError("Invalid or placeholder election ID. Please select a valid election from the Elections management dashboard.");
+          setLoading(false);
+        }
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const [electionData, statusesData] = await Promise.all([
+          getAdminElectionById(id),
+          getElectionStatuses(),
+        ]);
+
         if (!ignore) {
           if (!electionData) {
             setError("Election record could not be found in the database.");
@@ -89,16 +101,20 @@ export default function AdminElectionManagePage() {
             setElection(electionData);
             setStatuses(statusesData);
           }
-          setLoading(false);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!ignore) {
           console.error("Failed to load election management data:", err);
           setError(err instanceof Error ? err.message : "Failed to load election.");
+        }
+      } finally {
+        if (!ignore) {
           setLoading(false);
         }
-      });
+      }
+    }
+
+    fetchData();
 
     return () => {
       ignore = true;

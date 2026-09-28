@@ -43,7 +43,8 @@ export interface CandidateStudent {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
-  matric_number?: string | null;
+  full_name?: string | null;
+  matriculation_number?: string | null;
   department?: string | null;
   level?: string | null;
   programme?: string | null;

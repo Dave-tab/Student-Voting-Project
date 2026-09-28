@@ -34,12 +34,18 @@ export function CandidateBallotCard({
   const radioGroupName = `position-group-${positionId}`;
 
   const candidateName = candidate.student
-    ? `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim()
+    ? (candidate.student.full_name || 
+       `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
+       candidate.student.matriculation_number ||
+       "Candidate")
     : "Candidate Name Withheld";
 
-  const initials = candidate.student
-    ? `${candidate.student.first_name?.[0] || ""}${candidate.student.last_name?.[0] || ""}`
-    : "C";
+  const initials = candidateName
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "C";
 
   const slogan = candidate.candidate_details?.campaign_slogan;
 
@@ -102,9 +108,9 @@ export function CandidateBallotCard({
             )}
           </div>
 
-          {candidate.student?.matric_number && (
+          {candidate.student?.matriculation_number && (
             <p className="text-xs font-mono text-muted-foreground">
-              {candidate.student.matric_number}
+              {candidate.student.matriculation_number}
             </p>
           )}
 

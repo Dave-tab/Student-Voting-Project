@@ -15,7 +15,7 @@ export interface CandidateResultItem {
   candidate_id: string;
   candidate_name?: string;
   department?: string | null;
-  matric_number?: string | null;
+  matriculation_number?: string | null;
   photo_path?: string | null;
   votes: number;
   percentage: number | null;

@@ -11,7 +11,21 @@ interface RawCandidateAdminRow {
   updated_at: string;
   positions?: { id: string; name: string } | null;
   candidate_statuses?: { id: string; name: string } | null;
-  candidate_details?: { id: string; manifesto: string | null }[] | { id: string; manifesto: string | null } | null;
+  candidate_details?: {
+    id: string;
+    manifesto: string | null;
+    campaign_slogan: string | null;
+    photo_path: string | null;
+    approval_remarks: string | null;
+    withdrawal_reason: string | null;
+  }[] | {
+    id: string;
+    manifesto: string | null;
+    campaign_slogan: string | null;
+    photo_path: string | null;
+    approval_remarks: string | null;
+    withdrawal_reason: string | null;
+  } | null;
   students?: { id: string; matriculation_number: string; department_id: string | null } | null;
 }
 
@@ -31,7 +45,7 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
       updated_at,
       positions ( id, name ),
       candidate_statuses ( id, name ),
-      candidate_details ( id, manifesto ),
+      candidate_details ( id, manifesto, campaign_slogan, photo_path, approval_remarks, withdrawal_reason ),
       students ( id, matriculation_number, department_id )
     `)
     .eq("election_id", electionId)
@@ -62,8 +76,8 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
       }
 
       const manifestoDetail = Array.isArray(row.candidate_details)
-        ? row.candidate_details[0]?.manifesto
-        : row.candidate_details?.manifesto;
+        ? row.candidate_details[0]
+        : row.candidate_details;
 
       return {
         id: row.id,
@@ -76,7 +90,11 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
         department: "Student Body",
         candidate_status_id: row.candidate_status_id,
         status_name: row.candidate_statuses?.name || "Pending",
-        manifesto: manifestoDetail || null,
+        manifesto: manifestoDetail?.manifesto || null,
+        campaign_slogan: manifestoDetail?.campaign_slogan || null,
+        photo_path: manifestoDetail?.photo_path || null,
+        approval_remarks: manifestoDetail?.approval_remarks || null,
+        withdrawal_reason: manifestoDetail?.withdrawal_reason || null,
         created_at: row.created_at,
         updated_at: row.updated_at,
       };
@@ -88,12 +106,15 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
 
 /**
  * Updates a candidate's vetting/approval status (e.g. Approved, Rejected, Withdrawn).
+ * Supports optional remarks/reasons which are stored in candidate_details.
  */
 export async function updateCandidateStatus(
   candidateId: string,
-  newStatusId: string
+  newStatusId: string,
+  remarks?: string
 ): Promise<void> {
-  const { error } = await supabase
+  // 1. Update candidate status
+  const { error: statusError } = await supabase
     .from("candidates")
     .update({
       candidate_status_id: newStatusId,
@@ -101,8 +122,37 @@ export async function updateCandidateStatus(
     })
     .eq("id", candidateId);
 
-  if (error) {
-    throw new Error(`Failed to update candidate status: ${error.message}`);
+  if (statusError) {
+    throw new Error(`Failed to update candidate status: ${statusError.message}`);
+  }
+
+  // 2. If remarks provided, update candidate_details
+  if (remarks !== undefined) {
+    const { data: statusData } = await supabase
+      .from("candidate_statuses")
+      .select("name")
+      .eq("id", newStatusId)
+      .single();
+
+    const statusName = statusData?.name?.toLowerCase();
+    const updateObj: any = { updated_at: new Date().toISOString() };
+
+    if (statusName === "rejected") {
+      updateObj.approval_remarks = remarks;
+    } else if (statusName === "withdrawn") {
+      updateObj.withdrawal_reason = remarks;
+    } else if (statusName === "approved") {
+      updateObj.approval_remarks = remarks;
+    }
+
+    const { error: detailError } = await supabase
+      .from("candidate_details")
+      .update(updateObj)
+      .eq("candidate_id", candidateId);
+
+    if (detailError) {
+      console.error("Failed to update candidate remarks:", detailError.message);
+    }
   }
 }
 
