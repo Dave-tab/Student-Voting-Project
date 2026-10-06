@@ -25,7 +25,17 @@ export async function getLifecycleStatuses(): Promise<LookupStatus[]> {
     return [];
   }
 
-  return data || [];
+  const approvedOrder = [
+    "Draft",
+    "Scheduled",
+    "Open",
+    "Results Pending",
+    "Results Available",
+  ];
+
+  return (data || [])
+    .filter((s) => approvedOrder.includes(s.name))
+    .sort((a, b) => approvedOrder.indexOf(a.name) - approvedOrder.indexOf(b.name));
 }
 
 /**
@@ -163,23 +173,53 @@ export async function transitionElectionStatus(
     return; // No-op
   }
 
-  // Block any transition out of Published (Immutability rule)
-  if (currentStatusName === "Published") {
-    throw new Error("Published elections are immutable and cannot transition to another status.");
+  // Block any transition out of terminal state (Immutability rule)
+  if (currentStatusName === "Results Available" || currentStatusName === "Published") {
+    throw new Error("Concluded elections with official results are immutable and cannot transition to another status.");
   }
 
-  // Block invalid backward lifecycle transitions and arbitrary stage jumps (OD-10.1, Package Sec 16)
-  const lifecycleOrder = ["Draft", "Scheduled", "Open", "Closed", "Published"];
-  const currentIndex = lifecycleOrder.indexOf(currentStatusName);
-  const targetIndex = lifecycleOrder.indexOf(targetStatusName);
+  // Canonical lifecycle state progression
+  const canonicalStages = [
+    "Draft",
+    "Scheduled",
+    "Open",
+    "Results Pending",
+    "Results Available",
+  ];
+
+  const mapToCanonical = (name: string): string => {
+    const norm = name.trim().toLowerCase();
+    if (norm.includes("draft") || norm.includes("plan")) return "Draft";
+    if (norm.includes("sched") || norm.includes("upcom")) return "Scheduled";
+    if (norm === "open" || norm === "active") return "Open";
+    if (norm.includes("pending") || norm.includes("close") || norm.includes("review")) return "Results Pending";
+    if (norm.includes("available") || norm === "published") return "Results Available";
+    return name;
+  };
+
+  const canonicalCurrent = mapToCanonical(currentStatusName);
+  const canonicalTarget = mapToCanonical(targetStatusName);
+  const currentIndex = canonicalStages.indexOf(canonicalCurrent);
+  const targetIndex = canonicalStages.indexOf(canonicalTarget);
 
   if (currentIndex !== -1 && targetIndex !== -1) {
     if (targetIndex < currentIndex) {
-      throw new Error(`Backward lifecycle transition from ${currentStatusName} to ${targetStatusName} is strictly prohibited (OD-10.1).`);
+      throw new Error(`Backward lifecycle transition from ${currentStatusName} to ${targetStatusName} is strictly prohibited.`);
     }
     if (targetIndex > currentIndex + 1) {
-      throw new Error(`Arbitrary lifecycle skip from ${currentStatusName} to ${targetStatusName} is prohibited. Lifecycle must follow: Draft -> Scheduled -> Open -> Closed -> Published.`);
+      throw new Error(`Arbitrary lifecycle skip from ${currentStatusName} to ${targetStatusName} is prohibited. Lifecycle must follow: Draft -> Scheduled -> Open -> Results Pending -> Results Available.`);
     }
+  }
+
+  // If transitioning to Results Available, execute authoritative calculation
+  if (canonicalTarget === "Results Available") {
+    const { error: calcErr } = await supabase.rpc("calculate_election_results", {
+      p_election_id: electionId,
+    });
+    if (calcErr) {
+      throw new Error(`Authoritative results calculation failed: ${calcErr.message}`);
+    }
+    return;
   }
 
   // Enforce readiness check when transitioning into Scheduled or Open (OD-10.2, Package Sec 17)
@@ -214,14 +254,14 @@ export async function transitionElectionStatus(
 }
 
 /**
- * Executes the authoritative database calculation RPC for administrative review.
+ * Executes the authoritative database calculation RPC for administrative calculation.
  * Strictly read-only calculation derived from anonymous ballot_selections.
- * Administrators CANNOT edit vote counts, pick winners, or break ties.
+ * Automatically persists results and advances lifecycle to Results Available.
  */
 export async function reviewElectionResults(
   electionId: string
 ): Promise<ElectionResultsData> {
-  const { data, error } = await supabase.rpc("review_election_results", {
+  const { data, error } = await supabase.rpc("calculate_election_results", {
     p_election_id: electionId,
   });
 

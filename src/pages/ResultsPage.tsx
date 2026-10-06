@@ -1,15 +1,3 @@
-/**
- * ResultsPage (B51, B52, B53)
- * Route: /elections/:id/results
- * 
- * ARCHITECTURAL GOVERNANCE RULES:
- * 1. Displays authoritative aggregate election results computed by `calculate_election_results`.
- * 2. Anonymous Ballot Architecture: Zero voter identification linked to candidate selections.
- * 3. Tie Handling (Decision G): No winner declared for tied positions.
- * 4. Percentage Denominator (Decision H): Total valid candidate selections for each position.
- * 5. Handles all results access lifecycle states gracefully.
- */
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Breadcrumb } from "@/components/layouts/Breadcrumb";
@@ -153,7 +141,7 @@ export default function ResultsPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <h2 className="text-lg font-bold tracking-tight text-foreground">
-                Contested Offices &amp; Final Tallies
+                Contested Offices & Final Tallies
               </h2>
               <span className="text-xs text-muted-foreground">
                 {resultResponse.results?.positions.length || 0} Offices Evaluated
@@ -174,10 +162,10 @@ export default function ResultsPage() {
             <ShieldCheck className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div className="space-y-1">
               <strong className="text-foreground font-semibold block">
-                Official Electoral Commission Disclaimer
+                Official Results Information
               </strong>
               <p className="leading-relaxed">
-                These tallies are compiled from verified anonymous ballot selections recorded during the official voting window under the supervision of the Independent Electoral Committee, The Polytechnic, Ibadan. In alignment with ballot secrecy standards, no individual voter identity is associated with any candidate selection.
+                These tallies are calculated authoritatively by the platform database engine from verified anonymous ballot selections recorded during the official voting window. In alignment with ballot secrecy standards, no individual voter identity is associated with any candidate selection.
               </p>
             </div>
           </div>

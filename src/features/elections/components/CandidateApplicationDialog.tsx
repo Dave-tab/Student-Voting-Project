@@ -1,6 +1,9 @@
-import { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import type { Position } from "../types";
-import { submitCandidateApplication } from "../services/electionService";
+import { submitCandidateApplication, resubmitCandidateApplication } from "../services/electionService";
 import { supabase } from "@/lib/supabase";
 import {
   Dialog,
@@ -14,7 +17,16 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/Alert";
-import { Award, AlertCircle, CheckCircle2, ShieldCheck, Upload } from "lucide-react";
+import { Award, AlertCircle, CheckCircle2, ShieldCheck, Upload, RotateCcw, Edit3, Loader2 } from "lucide-react";
+
+const candidateAppSchema = z.object({
+  positionId: z.string().min(1, "Please select an elective position."),
+  campaignSlogan: z.string().max(150, "Campaign slogan must be under 150 characters.").optional(),
+  manifesto: z.string().max(2000, "Manifesto must be under 2000 characters.").optional(),
+  photoPath: z.string().optional(),
+});
+
+type CandidateAppSchemaType = z.infer<typeof candidateAppSchema>;
 
 interface CandidateApplicationDialogProps {
   isOpen: boolean;
@@ -25,9 +37,22 @@ interface CandidateApplicationDialogProps {
   studentId: string;
   matricNumber: string;
   onSuccess: () => void;
+  mode?: "create" | "redo" | "edit";
+  existingCandidateId?: string;
+  initialPositionId?: string;
+  initialCampaignSlogan?: string;
+  initialManifesto?: string;
+  initialPhotoPath?: string;
+  rejectionRemarks?: string;
 }
 
-export function CandidateApplicationDialog({
+export const CandidateApplicationDialog = React.memo(function CandidateApplicationDialog(
+  props: CandidateApplicationDialogProps
+) {
+  return <CandidateApplicationDialogInner {...props} />;
+});
+
+function CandidateApplicationDialogInner({
   isOpen,
   onClose,
   electionId,
@@ -36,16 +61,39 @@ export function CandidateApplicationDialog({
   studentId,
   matricNumber,
   onSuccess,
+  mode = "create",
+  existingCandidateId,
+  initialPositionId,
+  initialCampaignSlogan = "",
+  initialManifesto = "",
+  initialPhotoPath = "",
+  rejectionRemarks,
 }: CandidateApplicationDialogProps) {
-  const [positionId, setPositionId] = useState(positions[0]?.id || "");
-  const [campaignSlogan, setCampaignSlogan] = useState("");
-  const [manifesto, setManifesto] = useState("");
-  const [photoPath, setPhotoPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialPhotoPath || null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CandidateAppSchemaType>({
+    resolver: zodResolver(candidateAppSchema),
+    defaultValues: {
+      positionId: initialPositionId || positions[0]?.id || "",
+      campaignSlogan: initialCampaignSlogan,
+      manifesto: initialManifesto,
+      photoPath: initialPhotoPath,
+    },
+  });
+
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) onClose();
+    },
+    [onClose]
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,102 +102,163 @@ export function CandidateApplicationDialog({
     // Validate MIME type
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      setError("Invalid file type. Please upload a JPEG, PNG, or WEBP image.");
+      setErrorMsg("Invalid file type. Please upload a JPEG, PNG, or WEBP image.");
       return;
     }
 
     // Validate file size (Max 5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError("File size exceeds 5MB limit. Please choose a smaller image.");
+      setErrorMsg("File size exceeds 5MB limit. Please choose a smaller image.");
       return;
     }
 
-    setError(null);
+    setErrorMsg(null);
     setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!positionId) {
-      setError("Please select an elective position.");
-      return;
-    }
+  const onSubmit = async (data: CandidateAppSchemaType) => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
     try {
-      setSubmitting(true);
-      setError(null);
-      setSuccessMsg(null);
+      let finalPhotoPath = (data.photoPath || initialPhotoPath || "").trim();
 
-      let finalPhotoPath = photoPath.trim();
-
-      // If a file is selected, upload to candidate-media bucket securely
+      // If a file is selected, upload strictly to candidate-media bucket
       if (selectedFile) {
-        const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${electionId}/${studentId}/${Date.now()}.${fileExt}`;
-        
+        if (!electionId || !studentId) {
+          throw new Error("Missing required identification (Election/Student ID) for secure storage upload.");
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          throw new Error("Authentication required. Please sign in to upload your photograph.");
+        }
+
+        const fileExt = selectedFile.name.split(".").pop() || "jpg";
+        const timestamp = new Date().getTime();
+        const fileName = `${electionId}/${studentId}/${timestamp}.${fileExt}`;
+
         const { error: uploadError } = await supabase.storage
           .from("candidate-media")
           .upload(fileName, selectedFile, {
-            cacheControl: "3600",
+            contentType: selectedFile.type,
             upsert: true,
           });
 
         if (uploadError) {
-          throw new Error(`Media upload failed: ${uploadError.message}`);
+          throw new Error(`Failed to upload portrait photograph to secure storage: ${uploadError.message}`);
         }
 
-        const { data: publicUrlData } = supabase.storage
-          .from("candidate-media")
-          .getPublicUrl(fileName);
-
-        finalPhotoPath = publicUrlData.publicUrl;
+        finalPhotoPath = fileName;
       }
 
-      const res = await submitCandidateApplication({
-        electionId,
-        positionId,
-        studentId,
-        matricNumber,
-        campaignSlogan,
-        manifesto,
-        photoPath: finalPhotoPath,
-      });
+      if (mode === "redo" || mode === "edit") {
+        if (!existingCandidateId) {
+          throw new Error("Missing candidate filing reference for update.");
+        }
 
-      setSuccessMsg(res.message);
+        const res = await resubmitCandidateApplication({
+          candidateId: existingCandidateId,
+          electionId,
+          positionId: data.positionId,
+          campaignSlogan: data.campaignSlogan,
+          manifesto: data.manifesto,
+          photoPath: finalPhotoPath,
+        });
+
+        setSuccessMsg(res.message);
+      } else {
+        const res = await submitCandidateApplication({
+          electionId,
+          positionId: data.positionId,
+          studentId,
+          matricNumber,
+          campaignSlogan: data.campaignSlogan,
+          manifesto: data.manifesto,
+          photoPath: finalPhotoPath,
+        });
+
+        setSuccessMsg(res.message);
+      }
+
       setTimeout(() => {
         onSuccess();
         onClose();
-      }, 2000);
-    } catch (err) {
+      }, 1500);
+    } catch (err: unknown) {
       console.error("Application submission failed:", err);
-      setError(err instanceof Error ? err.message : "Failed to submit candidate application.");
-    } finally {
-      setSubmitting(false);
+      setErrorMsg(err instanceof Error ? err.message : "Failed to submit candidate application.");
     }
   };
 
+  const isRedo = mode === "redo";
+  const isEdit = mode === "edit";
+
+  useEffect(() => {
+    console.log("[CANDIDATE_DIALOG] MOUNT");
+    return () => {
+      console.log("[CANDIDATE_DIALOG] UNMOUNT");
+    };
+  }, []);
+
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
-            <Award className="h-4 w-4" />
-            <span>Candidate Nomination Filing</span>
+            {isRedo ? (
+              <RotateCcw className="h-4 w-4" />
+            ) : isEdit ? (
+              <Edit3 className="h-4 w-4" />
+            ) : (
+              <Award className="h-4 w-4" />
+            )}
+            <span>
+              {isRedo
+                ? "Redo Candidacy Application"
+                : isEdit
+                ? "Edit Nomination Filing"
+                : "Candidate Nomination Filing"}
+            </span>
           </div>
-          <DialogTitle className="text-xl font-bold">Run for Office</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            {isRedo
+              ? "Revise & Resubmit Candidacy"
+              : isEdit
+              ? "Update Your Nomination"
+              : "Run for Office"}
+          </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Election: <strong className="text-foreground">{electionTitle}</strong>
           </DialogDescription>
         </DialogHeader>
 
-        {error && (
+        {/* Rejection remarks guidance banner */}
+        {isRedo && rejectionRemarks && (
+          <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-xs space-y-1">
+            <div className="flex items-center gap-1.5 font-bold">
+              <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Electoral Commission Remarks to Address:</span>
+            </div>
+            <p className="italic text-[11px] leading-relaxed">
+              "{rejectionRemarks}"
+            </p>
+          </div>
+        )}
+
+        {errorMsg && (
           <Alert variant="error" className="py-2.5">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <AlertTitle className="text-xs">Submission Notice</AlertTitle>
             <AlertDescription className="text-xs leading-relaxed mt-0.5">
-              {error}
+              {errorMsg}
             </AlertDescription>
           </Alert>
         )}
@@ -164,7 +273,7 @@ export function CandidateApplicationDialog({
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-1 text-xs">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-1 text-xs">
           {/* Eligibility context */}
           <div className="p-3 rounded-md bg-muted/30 border border-border text-[11px] space-y-1">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
@@ -184,9 +293,8 @@ export function CandidateApplicationDialog({
               Elective Position <span className="text-destructive">*</span>
             </label>
             <select
-              value={positionId}
-              onChange={(e) => setPositionId(e.target.value)}
-              required
+              {...register("positionId")}
+              disabled={isSubmitting}
               className="w-full h-9 rounded-md border border-border bg-background px-3 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             >
               {positions.length === 0 && (
@@ -198,6 +306,11 @@ export function CandidateApplicationDialog({
                 </option>
               ))}
             </select>
+            {errors.positionId && (
+              <p className="text-xs text-red-600 font-medium" role="alert">
+                {errors.positionId.message}
+              </p>
+            )}
           </div>
 
           {/* Campaign Slogan */}
@@ -206,12 +319,17 @@ export function CandidateApplicationDialog({
               Campaign Slogan
             </label>
             <Input
-              value={campaignSlogan}
-              onChange={(e) => setCampaignSlogan(e.target.value)}
+              {...register("campaignSlogan")}
               placeholder="e.g. Integrity, Service & Innovation"
+              disabled={isSubmitting}
               className="h-9 text-xs"
               maxLength={150}
             />
+            {errors.campaignSlogan && (
+              <p className="text-xs text-red-600 font-medium" role="alert">
+                {errors.campaignSlogan.message}
+              </p>
+            )}
           </div>
 
           {/* Candidate Photograph Upload & Validation */}
@@ -227,6 +345,7 @@ export function CandidateApplicationDialog({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={handleFileChange}
+                  disabled={isSubmitting}
                   className="hidden"
                 />
               </label>
@@ -236,7 +355,7 @@ export function CandidateApplicationDialog({
                 </span>
               ) : (
                 <span className="text-xs text-muted-foreground italic">
-                  No file chosen (or provide URL below)
+                  No file chosen
                 </span>
               )}
             </div>
@@ -251,15 +370,6 @@ export function CandidateApplicationDialog({
                 <span className="text-[11px] text-muted-foreground">Preview Image Ready</span>
               </div>
             )}
-
-            <div className="pt-1">
-              <Input
-                value={photoPath}
-                onChange={(e) => setPhotoPath(e.target.value)}
-                placeholder="Or paste external image URL..."
-                className="h-8 text-xs font-mono"
-              />
-            </div>
           </div>
 
           {/* Manifesto / Vision */}
@@ -268,12 +378,17 @@ export function CandidateApplicationDialog({
               Candidate Manifesto
             </label>
             <Textarea
-              value={manifesto}
-              onChange={(e) => setManifesto(e.target.value)}
+              {...register("manifesto")}
               placeholder="State your policy goals, student welfare proposals, and qualifications..."
+              disabled={isSubmitting}
               className="text-xs min-h-[100px]"
               maxLength={2000}
             />
+            {errors.manifesto && (
+              <p className="text-xs text-red-600 font-medium" role="alert">
+                {errors.manifesto.message}
+              </p>
+            )}
           </div>
 
           <DialogFooter className="gap-2 pt-2">
@@ -282,7 +397,7 @@ export function CandidateApplicationDialog({
               variant="outline"
               size="sm"
               onClick={onClose}
-              disabled={submitting}
+              disabled={isSubmitting}
               className="text-xs"
             >
               Cancel
@@ -290,11 +405,32 @@ export function CandidateApplicationDialog({
             <Button
               type="submit"
               size="sm"
-              disabled={submitting || positions.length === 0}
+              disabled={isSubmitting || positions.length === 0}
               className="text-xs font-semibold gap-1.5"
             >
-              <Award className="h-3.5 w-3.5" />
-              <span>{submitting ? "Submitting Filing..." : "Submit Application"}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <span>Submitting Filing...</span>
+                </>
+              ) : (
+                <>
+                  {isRedo ? (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  ) : isEdit ? (
+                    <Edit3 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Award className="h-3.5 w-3.5" />
+                  )}
+                  <span>
+                    {isRedo
+                      ? "Resubmit Nomination Filing"
+                      : isEdit
+                      ? "Save & Update Filing"
+                      : "Submit Application"}
+                  </span>
+                </>
+              )}
             </Button>
           </DialogFooter>
         </form>

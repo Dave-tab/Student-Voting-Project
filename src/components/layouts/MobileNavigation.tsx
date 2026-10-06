@@ -183,6 +183,7 @@ function MobileNavigation() {
                   </span>
                   <NavLink
                     to="/admin"
+                    end
                     onClick={close}
                     className={({ isActive }) =>
                       cn(
@@ -192,6 +193,30 @@ function MobileNavigation() {
                     }
                   >
                     Administration
+                  </NavLink>
+                  <NavLink
+                    to="/admin/candidates"
+                    onClick={close}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary font-semibold",
+                        isActive ? "bg-primary/15" : "hover:bg-primary/10"
+                      )
+                    }
+                  >
+                    Candidate Approval & Vetting
+                  </NavLink>
+                  <NavLink
+                    to="/admin/elections"
+                    onClick={close}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary font-semibold",
+                        isActive ? "bg-primary/15" : "hover:bg-primary/10"
+                      )
+                    }
+                  >
+                    Elections Management
                   </NavLink>
                 </div>
               )}

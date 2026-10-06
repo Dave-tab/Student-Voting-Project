@@ -7,6 +7,9 @@ export type ElectionStatusType =
   | "Active"
   | "Closed"
   | "Ended"
+  | "Results Pending"
+  | "Results Available"
+  | "Under Review"
   | "Published"
   | "Archived";
 

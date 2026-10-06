@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import { Radio } from "@/components/ui/Radio";
 import { Building2, GraduationCap, Quote } from "lucide-react";
 import type { Candidate } from "@/features/elections/types";
+import { getImageUrl } from "../../../utils/imageUtils";
 
 interface CandidateBallotCardProps {
   candidate: Candidate;
@@ -89,7 +90,7 @@ export function CandidateBallotCard({
         <Avatar className="h-12 w-12 border border-border shrink-0">
           {candidate.candidate_details?.photo_path ? (
             <AvatarImage
-              src={candidate.candidate_details.photo_path}
+              src={getImageUrl(candidate.candidate_details.photo_path) || ""}
               alt={candidateName}
             />
           ) : null}

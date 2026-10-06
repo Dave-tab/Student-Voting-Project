@@ -30,8 +30,12 @@ import {
   Check,
   User,
   MessageSquare,
+  RotateCcw,
+  RefreshCw,
+  Clock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getImageUrl } from "@/utils/imageUtils";
 
 interface ElectionCandidatesTabProps {
   electionId: string;
@@ -40,6 +44,7 @@ interface ElectionCandidatesTabProps {
 export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps) {
   const [candidates, setCandidates] = useState<AdminCandidate[]>([]);
   const [statuses, setStatuses] = useState<LookupStatus[]>([]);
+  const [electionStatus, setElectionStatus] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -52,17 +57,25 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
   const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
   const [targetCandidate, setTargetCandidate] = useState<{ id: string; name: string; status: string } | null>(null);
   const [remarksText, setRemarksText] = useState("");
+  const [remarksError, setRemarksError] = useState<string | null>(null);
 
   async function loadData() {
     try {
       setLoading(true);
       setError(null);
-      const [candsData, statusesData] = await Promise.all([
+      const [candsData, statusesData, electionRes] = await Promise.all([
         getAdminCandidates(electionId),
         getCandidateStatuses(),
+        supabase
+          .from("elections")
+          .select("election_statuses(name)")
+          .eq("id", electionId)
+          .maybeSingle(),
       ]);
       setCandidates(candsData);
       setStatuses(statusesData);
+      const sName = (electionRes?.data?.election_statuses as unknown as { name?: string } | null)?.name || "";
+      setElectionStatus(sName);
     } catch (err) {
       console.error("Failed to load candidates:", err);
       setError(err instanceof Error ? err.message : "Failed to load candidates.");
@@ -73,16 +86,90 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
 
   useEffect(() => {
     let ignore = false;
-    loadData().then(() => {
-      if (ignore) return;
-    });
+
+    async function fetchData() {
+      try {
+        const [candsData, statusesData, electionRes] = await Promise.all([
+          getAdminCandidates(electionId),
+          getCandidateStatuses(),
+          supabase
+            .from("elections")
+            .select("election_statuses(name)")
+            .eq("id", electionId)
+            .maybeSingle(),
+        ]);
+        if (!ignore) {
+          setCandidates(candsData);
+          setStatuses(statusesData);
+          const sName = (electionRes?.data?.election_statuses as unknown as { name?: string } | null)?.name || "";
+          setElectionStatus(sName);
+          setError(null);
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Failed to load candidates:", err);
+          setError(err instanceof Error ? err.message : "Failed to load candidates.");
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    async function refreshSilently() {
+      try {
+        const candsData = await getAdminCandidates(electionId);
+        if (!ignore) {
+          setCandidates(candsData);
+        }
+      } catch {
+        // keep existing on background sync error
+      }
+    }
+
+    fetchData();
+
+    // Real-time synchronization on candidates table for this election
+    const channel = supabase
+      .channel(`election-${electionId}-admin-candidates`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "candidates", filter: `election_id=eq.${electionId}` },
+        () => {
+          refreshSilently();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "candidate_details" },
+        () => {
+          refreshSilently();
+        }
+      )
+      .subscribe();
+
+    const timer = setInterval(() => {
+      refreshSilently();
+    }, 8000);
 
     return () => {
       ignore = true;
+      supabase.removeChannel(channel);
+      clearInterval(timer);
     };
   }, [electionId]);
 
+  const isFrozen =
+    Boolean(electionStatus) &&
+    !["draft", "scheduled", "upcoming", "planning"].includes(electionStatus.toLowerCase());
+
   const handleStatusChange = async (candidateId: string, newStatusName: string, remarks?: string) => {
+    if (isFrozen) {
+      setError("Candidate applications and vetting determinations are permanently frozen once an election is open or concluded.");
+      return;
+    }
+
     const statusObj = statuses.find(
       (s) => s.name.toLowerCase() === newStatusName.toLowerCase()
     );
@@ -107,15 +194,21 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
   };
 
   const openRemarksDialog = (candidate: AdminCandidate, newStatus: string) => {
+    if (isFrozen) {
+      setError("Candidate applications and vetting determinations are permanently frozen for this election.");
+      return;
+    }
+
     setTargetCandidate({ id: candidate.id, name: candidate.full_name, status: newStatus });
     setRemarksText("");
+    setRemarksError(null);
     setRemarksDialogOpen(true);
   };
 
   const submitWithRemarks = async () => {
     if (!targetCandidate) return;
     if ((targetCandidate.status === "Rejected" || targetCandidate.status === "Withdrawn") && !remarksText.trim()) {
-      alert("Please provide mandatory remarks/reason for this action.");
+      setRemarksError("A mandatory remark or reason is required for this action.");
       return;
     }
 
@@ -136,11 +229,6 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
     return matchesSearch && matchesStatus;
   });
 
-  const getImageUrl = (path: string | null) => {
-    if (!path) return null;
-    return supabase.storage.from("candidate-media").getPublicUrl(path).data.publicUrl;
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -156,7 +244,28 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
             Review candidate profiles, manifestos, and approve or withdraw candidates.
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadData}
+            disabled={loading}
+            className="gap-1.5 text-xs h-8"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </Button>
+        </div>
       </div>
+
+      {isFrozen && (
+        <div className="flex items-center gap-2.5 p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs font-medium">
+          <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            <strong>Authoritative Candidate Freeze Enforced:</strong> This election is currently <strong>{electionStatus}</strong>. In accordance with election integrity governance, candidate applications, eligibility determinations, and vetting decisions are permanently frozen.
+          </span>
+        </div>
+      )}
 
       {/* Vetting Rule Notice */}
       <div className="p-3 rounded-lg border border-border bg-muted/20 text-xs text-muted-foreground space-y-1">
@@ -252,6 +361,9 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
             const isApproved = candidate.status_name.toLowerCase() === "approved";
             const isRejected = candidate.status_name.toLowerCase() === "rejected";
             const isWithdrawn = candidate.status_name.toLowerCase() === "withdrawn";
+            const isPending =
+              candidate.status_name.toLowerCase().includes("pending") ||
+              candidate.status_name.toLowerCase() === "nominated";
             const imageUrl = getImageUrl(candidate.photo_path);
 
             return (
@@ -301,42 +413,65 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
 
                         {/* Vetting Action Buttons */}
                         <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
-                          {!isApproved && (
-                            <Button
-                              size="sm"
-                              onClick={() => openRemarksDialog(candidate, "Approved")}
-                              disabled={updatingId === candidate.id}
-                              className="h-7 text-xs gap-1 font-semibold"
-                            >
-                              <Check className="h-3 w-3" />
-                              <span>Approve</span>
-                            </Button>
-                          )}
+                          {isFrozen ? (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-muted border border-border text-muted-foreground text-xs font-medium">
+                              <Clock className="h-3 w-3 text-muted-foreground/70" />
+                              <span>Candidate Pool Frozen</span>
+                            </div>
+                          ) : (
+                            <>
+                              {!isApproved && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => openRemarksDialog(candidate, "Approved")}
+                                  disabled={updatingId === candidate.id}
+                                  className="h-7 text-xs gap-1 font-semibold"
+                                >
+                                  <Check className="h-3 w-3" />
+                                  <span>Approve</span>
+                                </Button>
+                              )}
 
-                          {!isRejected && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openRemarksDialog(candidate, "Rejected")}
-                              disabled={updatingId === candidate.id}
-                              className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10"
-                            >
-                              <XCircle className="h-3 w-3" />
-                              <span>Reject</span>
-                            </Button>
-                          )}
+                              {!isRejected && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openRemarksDialog(candidate, "Rejected")}
+                                  disabled={updatingId === candidate.id}
+                                  className="h-7 text-xs gap-1 text-destructive hover:bg-destructive/10"
+                                >
+                                  <XCircle className="h-3 w-3" />
+                                  <span>Reject</span>
+                                </Button>
+                              )}
 
-                          {!isWithdrawn && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openRemarksDialog(candidate, "Withdrawn")}
-                              disabled={updatingId === candidate.id}
-                              className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
-                            >
-                              <UserX className="h-3 w-3" />
-                              <span>Withdraw</span>
-                            </Button>
+                              {!isWithdrawn && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openRemarksDialog(candidate, "Withdrawn")}
+                                  disabled={updatingId === candidate.id}
+                                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                >
+                                  <UserX className="h-3 w-3" />
+                                  <span>Withdraw</span>
+                                </Button>
+                              )}
+
+                              {!isPending && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openRemarksDialog(candidate, "Pending_Approval")}
+                                  disabled={updatingId === candidate.id}
+                                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                  title="Reset status back to Pending Approval"
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                  <span>Reset</span>
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -408,12 +543,20 @@ export function ElectionCandidatesTab({ electionId }: ElectionCandidatesTabProps
               <Textarea
                 placeholder={targetCandidate?.status === "Rejected" ? "State the specific reason for disqualification..." : "Provide any relevant notes for this action..."}
                 value={remarksText}
-                onChange={(e) => setRemarksText(e.target.value)}
+                onChange={(e) => {
+                  setRemarksText(e.target.value);
+                  if (remarksError) setRemarksError(null);
+                }}
                 className="text-xs min-h-[100px]"
               />
-              {targetCandidate?.status === "Rejected" && !remarksText.trim() && (
-                <p className="text-[10px] text-destructive font-medium">Rejection requires a documented reason.</p>
-              )}
+              {remarksError ? (
+                <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span>{remarksError}</span>
+                </p>
+              ) : (targetCandidate?.status === "Rejected" || targetCandidate?.status === "Withdrawn") && !remarksText.trim() ? (
+                <p className="text-[10px] text-destructive font-medium">This action requires a documented reason.</p>
+              ) : null}
             </div>
           </div>
 

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import type { PositionResultItem, CandidateResultItem } from "../types";
 import { Trophy, AlertTriangle, Users, MinusCircle } from "lucide-react";
+import { getImageUrl } from "../../../utils/imageUtils";
 
 interface PositionResultCardProps {
   position: PositionResultItem;
@@ -75,7 +76,7 @@ export function PositionResultCard({ position, positionNumber }: PositionResultC
             <div className="space-y-1">
               <strong className="font-semibold block">Official Tie Recorded</strong>
               <span>
-                Two or more candidates share the highest vote tally. Under institutional electoral rules, no single winner is declared pending resolution by the Electoral Commission.
+                Two or more candidates share the highest vote tally. Results for this position are inconclusive (Tie).
               </span>
             </div>
           </div>
@@ -125,7 +126,7 @@ export function PositionResultCard({ position, positionNumber }: PositionResultC
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border border-border">
                         {cand.photo_path && (
-                          <AvatarImage src={cand.photo_path} alt={cand.candidate_name} />
+                          <AvatarImage src={getImageUrl(cand.photo_path) || ""} alt={cand.candidate_name} />
                         )}
                         <AvatarFallback className="text-xs font-bold bg-muted text-foreground">
                           {initials}

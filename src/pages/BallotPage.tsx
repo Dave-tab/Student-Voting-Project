@@ -13,6 +13,7 @@ import {
 } from "@/features/elections/utils/electionUtils";
 import type { Election, Position, Candidate } from "@/features/elections/types";
 import { CandidateBallotCard } from "@/features/voting/components/CandidateBallotCard";
+import { SelectedCandidatePreview } from "@/features/voting/components/SelectedCandidatePreview";
 
 import { Breadcrumb } from "@/components/layouts/Breadcrumb";
 import { Button } from "@/components/ui/Button";
@@ -234,6 +235,9 @@ export default function BallotPage() {
               (c) => c.position_id === position.id
             );
             const currentSelection = selections[position.id];
+            const selectedCandidate = positionCandidates.find(
+              (c) => c.id === currentSelection
+            );
 
             return (
               <section
@@ -279,6 +283,15 @@ export default function BallotPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Immediate Selected Candidate Photo Preview */}
+                {selectedCandidate && (
+                  <SelectedCandidatePreview
+                    candidate={selectedCandidate}
+                    position={position}
+                    onClearSelection={() => clearSelection(election.id, position.id)}
+                  />
+                )}
 
                 {/* Candidate Selection Cards */}
                 {positionCandidates.length === 0 ? (

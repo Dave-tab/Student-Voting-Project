@@ -7,7 +7,7 @@
  * 2. Anonymity: Zero student_id, user_id, or ballot reference in result aggregates.
  * 3. Percentage Rule (Decision H): Denominator = total valid candidate selections for each position.
  * 4. Winner / Tie Rule (Decision G): Handled authoritatively by backend (Winner = null if Tied).
- * 5. Publication boundary (ODR-002, OD-12.1): Assigned Electoral Officer reviews and publishes.
+ * 5. Publication boundary: Calculated authoritatively by system once election ends.
  * 6. NO MOCK DATA: Never fabricates candidate votes, percentages, or winners.
  */
 
@@ -33,6 +33,10 @@ interface RawRpcResponse {
     winner_candidate_id: string | null;
     candidates: Array<{
       candidate_id: string;
+      candidate_name?: string;
+      department?: string;
+      matriculation_number?: string;
+      photo_path?: string;
       votes: number;
       percentage: number | null;
       is_winner: boolean;
@@ -55,7 +59,16 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
   }
 
   try {
-    // 1. Fetch Election Metadata
+    // 1. Authoritative Database Lifecycle Reconciliation
+    try {
+      await supabase.rpc("check_and_advance_election_lifecycle", {
+        p_election_id: electionId,
+      });
+    } catch (e) {
+      console.warn("check_and_advance_election_lifecycle notice:", e);
+    }
+
+    // 2. Fetch Election Metadata
     const election = await getElectionById(electionId, null);
     if (!election) {
       return {
@@ -67,39 +80,55 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
     }
 
     const lifecycleStatus = getElectionStatus(election);
-    const now = new Date();
-    const endDatetime = election.end_datetime ? new Date(election.end_datetime) : null;
-    const isPastEnd = endDatetime ? now > endDatetime : false;
 
-    // 2. Lifecycle Checks
-    if (lifecycleStatus === "Scheduled" || lifecycleStatus === "Upcoming" || lifecycleStatus === "Draft" || lifecycleStatus === "Planning") {
+    // 3. Lifecycle Checks
+    if (
+      lifecycleStatus === "Scheduled" ||
+      lifecycleStatus === "Upcoming" ||
+      lifecycleStatus === "Draft" ||
+      lifecycleStatus === "Planning"
+    ) {
       return {
         state: "not_yet_published",
         election,
         results: null,
-        message: "Voting for this election has not yet commenced. Official results will be published after the voting window closes.",
+        message:
+          "Voting for this election has not yet commenced. Official results will be automatically available after voting closes.",
       };
     }
 
-    if ((lifecycleStatus === "Open" || lifecycleStatus === "Active") && !isPastEnd) {
+    // Active Voting Window: strictly NO candidate tallies exposed to public or students
+    if (lifecycleStatus === "Open" || lifecycleStatus === "Active") {
       return {
         state: "voting_ongoing",
         election,
         results: null,
-        message: "Voting is currently actively in progress. In accordance with institutional security guidelines, results are compiled only after the voting window officially concludes.",
+        message:
+          "Voting is currently in progress. Candidate tallies and official results are strictly confidential during active voting and will be automatically available once the election concludes.",
       };
     }
 
-    if (lifecycleStatus !== "Published") {
+    if (lifecycleStatus === "Results Pending") {
       return {
         state: "not_yet_published",
         election,
         results: null,
-        message: "Official results are currently undergoing authoritative review and publication by the Electoral Commission.",
+        message:
+          "Voting has concluded. Official results are currently being calculated automatically.",
       };
     }
 
-    // 3. Published Election: Query Authoritative get_published_election_results RPC
+    if (lifecycleStatus !== "Published" && lifecycleStatus !== "Results Available") {
+      return {
+        state: "not_yet_published",
+        election,
+        results: null,
+        message:
+          "Official results are not available until voting concludes and automatic calculation is complete.",
+      };
+    }
+
+    // 4. Concluded Election: Query Authoritative get_published_election_results RPC
     const { data: rpcData, error: rpcError } = await supabase.rpc("get_published_election_results", {
       p_election_id: electionId,
     });
@@ -107,12 +136,16 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
     if (rpcError) {
       const errorMsg = rpcError.message || "";
 
-      if (errorMsg.toLowerCase().includes("not yet published")) {
+      if (
+        errorMsg.toLowerCase().includes("not yet published") ||
+        errorMsg.toLowerCase().includes("not available") ||
+        errorMsg.toLowerCase().includes("being calculated")
+      ) {
         return {
           state: "not_yet_published",
           election,
           results: null,
-          message: "Official results are currently undergoing authoritative review and publication by the Electoral Commission.",
+          message: errorMsg,
         };
       }
 
@@ -145,66 +178,7 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
       };
     }
 
-    // 4. Enrich Candidate Names & Metadata from Approved Candidates
-    let approvedCandidates: Candidate[] = [];
-    try {
-      approvedCandidates = await getApprovedCandidates(electionId);
-    } catch (e) {
-      console.warn("Could not fetch candidate details for enrichment:", e);
-    }
-
-    const candidateMap = new Map<string, Candidate>();
-    for (const cand of approvedCandidates) {
-      candidateMap.set(cand.id, cand);
-    }
-
-    const enrichedPositions: PositionResultItem[] = typedRpc.positions.map((pos) => {
-      const enrichedCandidates: CandidateResultItem[] = (pos.candidates || []).map((c) => {
-        const candidateMeta = candidateMap.get(c.candidate_id);
-        const studentInfo = candidateMeta?.student;
-        
-        let candidateName = "Candidate";
-        if (studentInfo) {
-          if (studentInfo.full_name) {
-            candidateName = studentInfo.full_name;
-          } else {
-            const names = [studentInfo.first_name, studentInfo.last_name].filter(Boolean);
-            if (names.length > 0) {
-              candidateName = names.join(" ");
-            } else if (studentInfo.matriculation_number) {
-              candidateName = `Candidate (${studentInfo.matriculation_number})`;
-            }
-          }
-        }
-
-        return {
-          candidate_id: c.candidate_id,
-          candidate_name: candidateName,
-          department: studentInfo?.department || null,
-          matriculation_number: studentInfo?.matriculation_number || null,
-          photo_path: candidateMeta?.candidate_details?.photo_path || null,
-          votes: c.votes,
-          percentage: c.percentage,
-          is_winner: c.is_winner,
-        };
-      });
-
-      return {
-        position_id: pos.position_id,
-        position_name: pos.position_name,
-        total_valid_selections: pos.total_valid_selections,
-        status: pos.status,
-        winner_candidate_id: pos.winner_candidate_id,
-        candidates: enrichedCandidates,
-      };
-    });
-
-    const resultsData: ElectionResultsData = {
-      election_id: typedRpc.election_id || electionId,
-      election_title: election.title,
-      calculated_at: typedRpc.calculated_at || new Date().toISOString(),
-      positions: enrichedPositions,
-    };
+    const resultsData = await enrichResults(typedRpc, electionId, election.title);
 
     return {
       state: "available",
@@ -220,6 +194,80 @@ export async function getElectionResults(electionId: string): Promise<ElectionRe
       error: err instanceof Error ? err.message : "An unexpected error occurred while loading election results.",
     };
   }
+}
+
+/**
+ * Enriches raw RPC results with candidate metadata (names, departments, photos).
+ */
+async function enrichResults(
+  typedRpc: RawRpcResponse,
+  electionId: string,
+  electionTitle: string
+): Promise<ElectionResultsData> {
+  let approvedCandidates: Candidate[] = [];
+  try {
+    approvedCandidates = await getApprovedCandidates(electionId);
+  } catch (e) {
+    console.warn("Could not fetch candidate details for enrichment:", e);
+  }
+
+  const candidateMap = new Map<string, Candidate>();
+  for (const cand of approvedCandidates) {
+    candidateMap.set(cand.id, cand);
+  }
+
+  const enrichedPositions: PositionResultItem[] = typedRpc.positions.map((pos) => {
+    const enrichedCandidates: CandidateResultItem[] = (pos.candidates || []).map((c) => {
+      const candidateMeta = candidateMap.get(c.candidate_id);
+      const studentInfo = candidateMeta?.student;
+      
+      let candidateName = c.candidate_name;
+      if (!candidateName) {
+        if (studentInfo) {
+          if (studentInfo.full_name) {
+            candidateName = studentInfo.full_name;
+          } else {
+            const names = [studentInfo.first_name, studentInfo.last_name].filter(Boolean);
+            if (names.length > 0) {
+              candidateName = names.join(" ");
+            } else if (studentInfo.matriculation_number) {
+              candidateName = `Candidate (${studentInfo.matriculation_number})`;
+            }
+          }
+        }
+      }
+      if (!candidateName) {
+        candidateName = `Candidate (${c.candidate_id.slice(0, 8)})`;
+      }
+
+      return {
+        candidate_id: c.candidate_id,
+        candidate_name: candidateName,
+        department: c.department || studentInfo?.department || null,
+        matriculation_number: c.matriculation_number || studentInfo?.matriculation_number || null,
+        photo_path: c.photo_path || candidateMeta?.candidate_details?.photo_path || null,
+        votes: c.votes,
+        percentage: c.percentage,
+        is_winner: c.is_winner,
+      };
+    });
+
+    return {
+      position_id: pos.position_id,
+      position_name: pos.position_name,
+      total_valid_selections: pos.total_valid_selections,
+      status: pos.status,
+      winner_candidate_id: pos.winner_candidate_id,
+      candidates: enrichedCandidates,
+    };
+  });
+
+  return {
+    election_id: typedRpc.election_id || electionId,
+    election_title: electionTitle,
+    calculated_at: typedRpc.calculated_at || new Date().toISOString(),
+    positions: enrichedPositions,
+  };
 }
 
 /**

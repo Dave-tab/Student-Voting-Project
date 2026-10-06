@@ -92,9 +92,6 @@ export async function assignElectoralOfficer(
   };
 }
 
-/**
- * Revokes an Electoral Officer's assignment for an election (B83).
- */
 export async function removeElectoralOfficer(assignmentId: string): Promise<void> {
   const { error } = await supabase
     .from("election_officer_assignments")
@@ -105,3 +102,39 @@ export async function removeElectoralOfficer(assignmentId: string): Promise<void
     throw new Error(`Failed to remove Electoral Officer assignment: ${error.message}`);
   }
 }
+
+export interface ElectoralOfficerUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
+/**
+ * Fetches all registered users who possess the electoral_officer role.
+ */
+export async function getAvailableElectoralOfficers(): Promise<ElectoralOfficerUser[]> {
+  const { data, error } = await supabase
+    .from("users")
+    .select(`
+      id,
+      email,
+      roles!inner ( name )
+    `)
+    .in("roles.name", ["electoral_officer", "electoral_admin"])
+    .order("email");
+
+  if (error) {
+    console.error("Failed to load electoral officers:", error);
+    return [];
+  }
+
+  return (data || []).map((u) => {
+    const roleObj = Array.isArray(u.roles) ? u.roles[0] : (u.roles as unknown as { name?: string } | null);
+    return {
+      id: u.id,
+      email: u.email,
+      role: roleObj?.name || "electoral_admin",
+    };
+  });
+}
+

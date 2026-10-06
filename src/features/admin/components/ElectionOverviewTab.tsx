@@ -16,7 +16,7 @@ import {
   AlertCircle,
   Edit3,
 } from "lucide-react";
-import { formatElectionDate } from "@/features/elections/utils/electionUtils";
+import { formatElectionDate, convertToWATISO } from "@/features/elections/utils/electionUtils";
 import { DateTimePickerWAT } from "@/components/ui/DateTimePickerWAT";
 
 interface ElectionOverviewTabProps {
@@ -66,8 +66,8 @@ export function ElectionOverviewTab({
       await updateAdminElection(election.id, {
         name: name.trim(),
         description: description.trim() || undefined,
-        start_datetime: startDatetime ? new Date(startDatetime).toISOString() : undefined,
-        end_datetime: endDatetime ? new Date(endDatetime).toISOString() : undefined,
+        start_datetime: startDatetime ? convertToWATISO(startDatetime) : undefined,
+        end_datetime: endDatetime ? convertToWATISO(endDatetime) : undefined,
         election_status_id: statusId,
       });
 

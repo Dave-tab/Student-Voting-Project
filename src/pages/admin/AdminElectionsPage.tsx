@@ -9,6 +9,7 @@ import {
   createAdminElection,
   getElectionStatuses,
   getAcademicSessions,
+  getDepartments,
   deleteAdminElection,
   type LookupAcademicSession,
 } from "@/features/admin/services/adminElectionService";
@@ -29,12 +30,22 @@ import {
   Globe,
   ArrowLeft,
   Trash2,
+  UserCheck,
+  UserPlus,
+  Shield,
 } from "lucide-react";
 import {
   formatElectionDateWAT,
   getDefaultElectionScheduleWAT,
+  convertToWATISO,
 } from "@/features/elections/utils/electionUtils";
 import { DateTimePickerWAT } from "@/components/ui/DateTimePickerWAT";
+import {
+  getAvailableElectoralOfficers,
+  assignElectoralOfficer,
+  type ElectoralOfficerUser,
+} from "@/features/admin/services/adminOfficerService";
+import { provisionAdminAccount } from "@/features/admin/services/adminProvisioningService";
 
 export default function AdminElectionsPage() {
   const navigate = useNavigate();
@@ -42,6 +53,7 @@ export default function AdminElectionsPage() {
   const [elections, setElections] = useState<AdminElection[]>([]);
   const [statuses, setStatuses] = useState<LookupStatus[]>([]);
   const [academicSessions, setAcademicSessions] = useState<LookupAcademicSession[]>([]);
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,24 +98,34 @@ export default function AdminElectionsPage() {
     end_datetime: defaultSchedule.end_datetime,
     election_status_id: "",
     academic_session_id: "",
+    department_id: "",
   });
+
+  const [availableOfficers, setAvailableOfficers] = useState<ElectoralOfficerUser[]>([]);
+  const [electoralAdminMode, setElectoralAdminMode] = useState<"existing" | "new" | "none">("existing");
+  const [selectedOfficerId, setSelectedOfficerId] = useState<string>("");
+  const [newOfficerEmail, setNewOfficerEmail] = useState<string>("");
+  const [newOfficerPassword, setNewOfficerPassword] = useState<string>("");
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const [electionsData, statusesData, sessionsData] = await Promise.all([
+      const [electionsData, statusesData, sessionsData, deptsData] = await Promise.all([
         getAdminElections(),
         getElectionStatuses(),
         getAcademicSessions(),
+        getDepartments(),
       ]);
       setElections(electionsData);
       setStatuses(statusesData);
       setAcademicSessions(sessionsData);
+      setDepartments(deptsData);
       setFormData((prev) => ({
         ...prev,
         election_status_id: prev.election_status_id || statusesData[0]?.id || "",
         academic_session_id: prev.academic_session_id || sessionsData[0]?.id || "",
+        department_id: prev.department_id || deptsData[0]?.id || "",
       }));
     } catch (err) {
       console.error("Failed to load elections:", err);
@@ -115,16 +137,18 @@ export default function AdminElectionsPage() {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([getAdminElections(), getElectionStatuses(), getAcademicSessions()])
-      .then(([electionsData, statusesData, sessionsData]) => {
+    Promise.all([getAdminElections(), getElectionStatuses(), getAcademicSessions(), getDepartments()])
+      .then(([electionsData, statusesData, sessionsData, deptsData]) => {
         if (!ignore) {
           setElections(electionsData);
           setStatuses(statusesData);
           setAcademicSessions(sessionsData);
+          setDepartments(deptsData);
           setFormData((prev) => ({
             ...prev,
             election_status_id: prev.election_status_id || statusesData[0]?.id || "",
             academic_session_id: prev.academic_session_id || sessionsData[0]?.id || "",
+            department_id: prev.department_id || deptsData[0]?.id || "",
           }));
           setLoading(false);
         }
@@ -151,7 +175,23 @@ export default function AdminElectionsPage() {
       end_datetime: freshSchedule.end_datetime,
       election_status_id: statuses[0]?.id || "",
       academic_session_id: academicSessions[0]?.id || "",
+      department_id: departments[0]?.id || "",
     });
+    setNewOfficerEmail("");
+    setNewOfficerPassword("");
+    getAvailableElectoralOfficers()
+      .then((officers) => {
+        setAvailableOfficers(officers);
+        if (officers.length > 0) {
+          setSelectedOfficerId(officers[0].id);
+          setElectoralAdminMode("existing");
+        } else {
+          setElectoralAdminMode("new");
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load available electoral officers:", err);
+      });
     setStep("configure");
     setCreateError(null);
     setShowCreateDialog(true);
@@ -188,27 +228,92 @@ export default function AdminElectionsPage() {
       return;
     }
 
+    // Validate Electoral Admin provisioning according to OD-04
+    if (electoralAdminMode === "new") {
+      if (!newOfficerEmail.trim() || !newOfficerEmail.includes("@")) {
+        setCreateError("Please provide a valid email address for the proposed Electoral Admin.");
+        return;
+      }
+      if (!newOfficerPassword || newOfficerPassword.length < 8) {
+        setCreateError("Electoral Admin temporary password must be at least 8 characters long.");
+        return;
+      }
+    } else if (electoralAdminMode === "existing" && availableOfficers.length > 0 && !selectedOfficerId) {
+      setCreateError("Please select an existing Electoral Admin to assign, or choose Path B to provision a new one.");
+      return;
+    }
+
     setStep("review");
   };
 
-  // Step 2: Final submission from Review step
+  // Step 2: Final submission from Review step (Strict transaction boundary conforming to OD-04)
   const handleFinalSubmit = async () => {
+    let provisionedUserId: string | null = null;
     try {
       setCreating(true);
       setCreateError(null);
 
-      const res = await createAdminElection({
-        name: formData.name.trim(),
-        description: formData.description?.trim() || undefined,
-        start_datetime: new Date(formData.start_datetime).toISOString(),
-        end_datetime: new Date(formData.end_datetime).toISOString(),
-        election_status_id: formData.election_status_id || statuses[0]?.id || "",
-        academic_session_id: formData.academic_session_id,
-      });
+      // Path B: Provision New Electoral Admin FIRST (conforming to OD-04)
+      if (electoralAdminMode === "new" && newOfficerEmail.trim() && newOfficerPassword) {
+        const provRes = await provisionAdminAccount({
+          email: newOfficerEmail.trim(),
+          password: newOfficerPassword,
+          role: "electoral_admin",
+          action: "provision",
+        });
+
+        if (!provRes.success) {
+          throw new Error(`Failed to provision new Electoral Admin: ${provRes.message}`);
+        }
+
+        const newUserId = provRes.userId || provRes.user_id;
+        if (!newUserId || typeof newUserId !== "string") {
+          throw new Error("Failed to provision new Electoral Admin: No user identity reference returned.");
+        }
+        provisionedUserId = newUserId;
+      }
+
+      // If provisioning succeeded or we are assigning an existing officer, create election and link officer
+      let electionId: string | null = null;
+      try {
+        const res = await createAdminElection({
+          name: formData.name.trim(),
+          description: formData.description?.trim() || undefined,
+          start_datetime: convertToWATISO(formData.start_datetime),
+          end_datetime: convertToWATISO(formData.end_datetime),
+          election_status_id: formData.election_status_id || statuses[0]?.id || "",
+          academic_session_id: formData.academic_session_id,
+          department_id: formData.department_id,
+        });
+        electionId = res.id;
+
+        // Assign the officer
+        if (electoralAdminMode === "new" && provisionedUserId) {
+          await assignElectoralOfficer(electionId, provisionedUserId);
+        } else if (electoralAdminMode === "existing" && selectedOfficerId) {
+          await assignElectoralOfficer(electionId, selectedOfficerId);
+        }
+      } catch (err) {
+        // Downstream failure: if we provisioned a new admin in Path B, we MUST roll back and delete that identity
+        if (provisionedUserId) {
+          console.warn("Downstream election creation/assignment failed. Rolling back provisioned administrator identity:", provisionedUserId);
+          try {
+            await provisionAdminAccount({
+              action: "delete",
+              userId: provisionedUserId,
+            });
+          } catch (rollbackErr) {
+            console.error("Compensating rollback action failed for user:", provisionedUserId, rollbackErr);
+          }
+        }
+        throw err; // Propagate original error to display in administrative interface
+      }
 
       setShowCreateDialog(false);
       await loadData();
-      navigate(`/admin/elections/${res.id}`);
+      if (electionId) {
+        navigate(`/admin/elections/${electionId}`);
+      }
     } catch (err) {
       console.error("Failed to create election:", err);
       setCreateError(err instanceof Error ? err.message : "Failed to create election.");
@@ -513,6 +618,32 @@ export default function AdminElectionsPage() {
                     )}
                   </div>
 
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-foreground">
+                      Authoritative Department <span className="text-destructive">*</span>
+                    </label>
+                    {departments.length === 0 ? (
+                      <div className="p-2.5 rounded-md bg-destructive/10 text-destructive text-xs border border-destructive/20">
+                        No departments found.
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.department_id}
+                        onChange={(e) =>
+                          setFormData({ ...formData, department_id: e.target.value })
+                        }
+                        required
+                        className="w-full h-9 rounded-md border border-border bg-background px-3 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
                   {/* Section 10 DateTimePickerWAT */}
                   <div className="space-y-3 pt-1">
                     <DateTimePickerWAT
@@ -530,6 +661,115 @@ export default function AdminElectionsPage() {
                       onChange={(val) => setFormData({ ...formData, end_datetime: val })}
                       required
                     />
+                  </div>
+
+                  {/* Electoral Admin Assignment Section (Owner Decision 4) */}
+                  <div className="space-y-2.5 pt-2 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-foreground flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5 text-primary" />
+                        <span>Electoral Admin Assignment</span>
+                      </label>
+                      <Badge variant="secondary" className="text-[10px]">
+                        Owner Decision 4
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setElectoralAdminMode("existing")}
+                        disabled={availableOfficers.length === 0}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all ${
+                          electoralAdminMode === "existing"
+                            ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                            : "border-border bg-card text-muted-foreground hover:border-border/80"
+                        } ${availableOfficers.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        <UserCheck className="h-4 w-4 shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold leading-tight">Path A: Existing</div>
+                          <div className="text-[10px] text-muted-foreground font-normal">
+                            Select assigned officer ({availableOfficers.length})
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setElectoralAdminMode("new")}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition-all ${
+                          electoralAdminMode === "new"
+                            ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                            : "border-border bg-card text-muted-foreground hover:border-border/80"
+                        }`}
+                      >
+                        <UserPlus className="h-4 w-4 shrink-0" />
+                        <div>
+                          <div className="text-xs font-semibold leading-tight">Path B: Provision New</div>
+                          <div className="text-[10px] text-muted-foreground font-normal">
+                            Create &amp; assign officer
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    {electoralAdminMode === "existing" && (
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-[11px] text-muted-foreground font-medium">
+                          Select Existing Electoral Admin
+                        </label>
+                        {availableOfficers.length === 0 ? (
+                          <div className="p-2.5 rounded-md bg-muted/40 text-muted-foreground text-xs border border-border">
+                            No existing Electoral Admins found. Please use Path B to provision one.
+                          </div>
+                        ) : (
+                          <select
+                            value={selectedOfficerId}
+                            onChange={(e) => setSelectedOfficerId(e.target.value)}
+                            className="w-full h-9 rounded-md border border-border bg-background px-3 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          >
+                            {availableOfficers.map((officer) => (
+                              <option key={officer.id} value={officer.id}>
+                                {officer.email} ({officer.role.replace("_", " ")})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
+
+                    {electoralAdminMode === "new" && (
+                      <div className="space-y-2 pt-1 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-foreground">
+                            Proposed Electoral Admin Email <span className="text-destructive">*</span>
+                          </label>
+                          <Input
+                            type="email"
+                            placeholder="electoral.admin@polyibadan.edu.ng"
+                            value={newOfficerEmail}
+                            onChange={(e) => setNewOfficerEmail(e.target.value)}
+                            className="text-xs bg-background h-8"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-semibold text-foreground">
+                            Proposed Temporary Password <span className="text-destructive">*</span>
+                          </label>
+                          <Input
+                            type="password"
+                            placeholder="Min. 8 characters"
+                            value={newOfficerPassword}
+                            onChange={(e) => setNewOfficerPassword(e.target.value)}
+                            className="text-xs bg-background h-8"
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          This administrator will be securely provisioned with the <strong>Electoral Admin</strong> role and automatically assigned to this election upon creation.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -657,6 +897,19 @@ export default function AdminElectionsPage() {
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-border/60">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Assigned Electoral Administrator (OD-04)
+                      </span>
+                      <p className="text-xs font-semibold text-foreground mt-0.5">
+                        {electoralAdminMode === "existing"
+                          ? availableOfficers.find((o) => o.id === selectedOfficerId)?.email || "Selected Existing Officer"
+                          : electoralAdminMode === "new"
+                          ? `New: ${newOfficerEmail} (Role: electoral_admin)`
+                          : "None"}
+                      </p>
                     </div>
                   </div>
                 </CardContent>

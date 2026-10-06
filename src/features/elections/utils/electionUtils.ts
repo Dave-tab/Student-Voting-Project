@@ -17,22 +17,32 @@ export function getElectionStatus(election: Election): ElectionStatusType {
     statusName = election.status.name;
   }
 
-  const normalized = statusName.toLowerCase();
+  const normalized = statusName.trim().toLowerCase();
 
-  if (normalized.includes("draft") || normalized.includes("plan")) {
-    return "Draft";
+  // Authoritative Database Lifecycle mapping - No synthetic client time overrides
+  if (normalized === "open" || normalized === "active") {
+    return "Open";
+  }
+  if (normalized.includes("available")) {
+    return "Results Available";
+  }
+  if (normalized.includes("pending")) {
+    return "Results Pending";
+  }
+  if (normalized === "published") {
+    return "Results Available"; // Legacy compatibility mapped to approved terminal state
   }
   if (normalized.includes("sched") || normalized.includes("upcom")) {
     return "Scheduled";
   }
-  if (normalized.includes("open") || normalized.includes("active")) {
-    return "Open";
+  if (normalized.includes("draft") || normalized.includes("plan")) {
+    return "Draft";
   }
   if (normalized.includes("close") || normalized.includes("end")) {
     return "Closed";
   }
-  if (normalized.includes("publish")) {
-    return "Published";
+  if (normalized.includes("review")) {
+    return "Results Pending";
   }
   if (normalized.includes("archiv")) {
     return "Archived";
@@ -54,12 +64,16 @@ export function getElectionStatusBadgeConfig(status: ElectionStatusType): {
       return { variant: "success", label: "Open for Voting" };
     case "Scheduled":
     case "Upcoming":
-      return { variant: "warning", label: "Upcoming" };
+      return { variant: "warning", label: "Scheduled" };
+    case "Results Pending":
+    case "Under Review":
+      return { variant: "warning", label: "Results Pending" };
+    case "Results Available":
+    case "Published":
+      return { variant: "default", label: "Results Available" };
     case "Closed":
     case "Ended":
-      return { variant: "secondary", label: "Voting Closed" };
-    case "Published":
-      return { variant: "default", label: "Results Published" };
+      return { variant: "secondary", label: "Voting Concluded" };
     case "Archived":
       return { variant: "default", label: "Archived" };
     case "Draft":
@@ -99,6 +113,10 @@ export function getPresentationCountdown(election: Election, nowMs?: number): st
 
   if (status === "Closed" || status === "Ended") {
     return "Voting has concluded";
+  }
+
+  if (status === "Published") {
+    return "Official results available";
   }
 
   if (status === "Archived") {
@@ -288,4 +306,21 @@ export function getDefaultElectionScheduleWAT(): {
     start_datetime: `${tomorrowDateStr}T09:00`,
     end_datetime: `${dayAfterDateStr}T16:00`,
   };
+}
+
+/**
+ * Converts a "YYYY-MM-DDTHH:mm" string (assumed to be in WAT) to a UTC ISO string.
+ * This ensures that even if the admin's browser is in a different timezone,
+ * the election schedule is saved correctly in institutional West Africa Time (UTC+1).
+ */
+export function convertToWATISO(localDatetime: string): string {
+  if (!localDatetime) return new Date().toISOString();
+  
+  // Nigeria is strictly UTC+1. Append the offset to force parsing in WAT.
+  // Format: YYYY-MM-DDTHH:mm:00+01:00
+  const withOffset = localDatetime.includes("+") || localDatetime.endsWith("Z")
+    ? localDatetime
+    : `${localDatetime}:00+01:00`;
+    
+  return new Date(withOffset).toISOString();
 }

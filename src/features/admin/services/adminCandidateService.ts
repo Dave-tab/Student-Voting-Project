@@ -9,6 +9,7 @@ interface RawCandidateAdminRow {
   candidate_status_id: string;
   created_at: string;
   updated_at: string;
+  elections?: { id: string; name: string } | null;
   positions?: { id: string; name: string } | null;
   candidate_statuses?: { id: string; name: string } | null;
   candidate_details?: {
@@ -26,14 +27,20 @@ interface RawCandidateAdminRow {
     approval_remarks: string | null;
     withdrawal_reason: string | null;
   } | null;
-  students?: { id: string; matriculation_number: string; department_id: string | null } | null;
+  students?: {
+    id: string;
+    matriculation_number: string;
+    department_id: string | null;
+    departments?: { name?: string | null } | null;
+  } | null;
 }
 
 /**
- * Fetches all candidates for an authorized election with position and student metadata.
+ * Fetches all candidates for an authorized election (or all elections if electionId is omitted or "all")
+ * with position, election, and student metadata.
  */
-export async function getAdminCandidates(electionId: string): Promise<AdminCandidate[]> {
-  const { data, error } = await supabase
+export async function getAdminCandidates(electionId?: string): Promise<AdminCandidate[]> {
+  let query = supabase
     .from("candidates")
     .select(`
       id,
@@ -43,13 +50,18 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
       candidate_status_id,
       created_at,
       updated_at,
+      elections ( id, name ),
       positions ( id, name ),
       candidate_statuses ( id, name ),
       candidate_details ( id, manifesto, campaign_slogan, photo_path, approval_remarks, withdrawal_reason ),
-      students ( id, matriculation_number, department_id )
-    `)
-    .eq("election_id", electionId)
-    .order("created_at", { ascending: false });
+      students ( id, matriculation_number, department_id, departments ( name ) )
+    `);
+
+  if (electionId && electionId !== "all") {
+    query = query.eq("election_id", electionId);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) {
     throw new Error(`Failed to load candidates: ${error.message}`);
@@ -57,21 +69,26 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
 
   const rawRows = (data as unknown as RawCandidateAdminRow[]) || [];
 
-  // Enriched candidates with student names from student_register if available
+  // Enriched candidates with student names from student_register or students table
   const candidates: AdminCandidate[] = await Promise.all(
     rawRows.map(async (row) => {
       const matric = row.students?.matriculation_number || "";
       let fullName = "Candidate Student";
+      let deptName = row.students?.departments?.name || "Student Body";
 
       if (matric) {
         const { data: regData } = await supabase
           .from("student_register")
-          .select("full_name")
+          .select("full_name, departments ( name )")
           .eq("matriculation_number", matric)
           .maybeSingle();
 
         if (regData?.full_name) {
           fullName = regData.full_name;
+        }
+        const regDept = (regData as unknown as { departments?: { name?: string } | { name?: string }[] })?.departments;
+        if (regDept) {
+          deptName = Array.isArray(regDept) ? regDept[0]?.name || deptName : regDept.name || deptName;
         }
       }
 
@@ -82,12 +99,13 @@ export async function getAdminCandidates(electionId: string): Promise<AdminCandi
       return {
         id: row.id,
         election_id: row.election_id,
+        election_name: row.elections?.name || "Election",
         position_id: row.position_id,
         position_name: row.positions?.name || "Unassigned Position",
         student_id: row.student_id,
         matriculation_number: matric || "N/A",
         full_name: fullName,
-        department: "Student Body",
+        department: deptName,
         candidate_status_id: row.candidate_status_id,
         status_name: row.candidate_statuses?.name || "Pending",
         manifesto: manifestoDetail?.manifesto || null,
@@ -126,33 +144,44 @@ export async function updateCandidateStatus(
     throw new Error(`Failed to update candidate status: ${statusError.message}`);
   }
 
-  // 2. If remarks provided, update candidate_details
-  if (remarks !== undefined) {
-    const { data: statusData } = await supabase
-      .from("candidate_statuses")
-      .select("name")
-      .eq("id", newStatusId)
-      .single();
+  // 2. Fetch status name to correctly route remarks
+  const { data: statusData } = await supabase
+    .from("candidate_statuses")
+    .select("name")
+    .eq("id", newStatusId)
+    .single();
 
-    const statusName = statusData?.name?.toLowerCase();
-    const updateObj: any = { updated_at: new Date().toISOString() };
+  const statusName = statusData?.name?.toLowerCase() || "";
+  const updateObj: {
+    updated_at: string;
+    approval_remarks?: string | null;
+    withdrawal_reason?: string | null;
+  } = { updated_at: new Date().toISOString() };
 
-    if (statusName === "rejected") {
-      updateObj.approval_remarks = remarks;
-    } else if (statusName === "withdrawn") {
-      updateObj.withdrawal_reason = remarks;
-    } else if (statusName === "approved") {
-      updateObj.approval_remarks = remarks;
-    }
+  if (statusName === "rejected") {
+    updateObj.approval_remarks = remarks || null;
+  } else if (statusName === "withdrawn") {
+    updateObj.withdrawal_reason = remarks || null;
+  } else if (statusName === "approved") {
+    updateObj.approval_remarks = remarks || null;
+  } else if (statusName.includes("pending")) {
+    updateObj.approval_remarks = null;
+    updateObj.withdrawal_reason = null;
+  }
 
-    const { error: detailError } = await supabase
-      .from("candidate_details")
-      .update(updateObj)
-      .eq("candidate_id", candidateId);
+  // 3. Upsert into candidate_details so remarks are persisted cleanly
+  const { error: detailError } = await supabase
+    .from("candidate_details")
+    .upsert(
+      {
+        candidate_id: candidateId,
+        ...updateObj,
+      },
+      { onConflict: "candidate_id" }
+    );
 
-    if (detailError) {
-      console.error("Failed to update candidate remarks:", detailError.message);
-    }
+  if (detailError) {
+    console.error("Failed to update candidate remarks:", detailError.message);
   }
 }
 

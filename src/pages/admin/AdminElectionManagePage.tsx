@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
@@ -15,7 +15,9 @@ import { ElectionOverviewTab } from "@/features/admin/components/ElectionOvervie
 import { ElectionPositionsTab } from "@/features/admin/components/ElectionPositionsTab";
 import { ElectionCandidatesTab } from "@/features/admin/components/ElectionCandidatesTab";
 import { ElectionRegisterTab } from "@/features/admin/components/ElectionRegisterTab";
+import { ElectionOfficersTab } from "@/features/admin/components/ElectionOfficersTab";
 import { ElectionLifecycleTab } from "@/features/admin/components/ElectionLifecycleTab";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -31,7 +33,7 @@ import {
 } from "lucide-react";
 import { formatElectionDate } from "@/features/elections/utils/electionUtils";
 
-type TabKey = "overview" | "positions" | "candidates" | "register" | "lifecycle";
+type TabKey = "overview" | "positions" | "candidates" | "register" | "officers" | "lifecycle";
 
 export default function AdminElectionManagePage() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +53,7 @@ export default function AdminElectionManagePage() {
 
   const isValidUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!id || !isValidUuid(id)) return;
     try {
       setLoading(true);
@@ -73,7 +75,7 @@ export default function AdminElectionManagePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     let ignore = false;
@@ -89,15 +91,24 @@ export default function AdminElectionManagePage() {
       setLoading(true);
       setError(null);
       try {
+        // Step 1: Synchronize authoritative database lifecycle status
+        try {
+          await supabase.rpc("check_and_advance_election_lifecycle", {
+            p_election_id: id,
+          });
+        } catch (advErr) {
+          console.warn("check_and_advance_election_lifecycle notice:", advErr);
+        }
+
         const [electionData, statusesData] = await Promise.all([
           getAdminElectionById(id),
           getElectionStatuses(),
         ]);
 
-        if (!ignore) {
-          if (!electionData) {
-            setError("Election record could not be found in the database.");
-          } else {
+        if (!electionData) {
+          setError("Election record could not be found in the database.");
+        } else {
+          if (!ignore) {
             setElection(electionData);
             setStatuses(statusesData);
           }
@@ -120,6 +131,38 @@ export default function AdminElectionManagePage() {
       ignore = true;
     };
   }, [id]);
+
+  // --- REAL-TIME AUTHORITATIVE LIFECYCLE MONITORING (Synced with Timer) ---
+  useEffect(() => {
+    if (!election) return;
+    const statusName = election.status_name.toLowerCase();
+    if (statusName !== "open" && statusName !== "active" && statusName !== "scheduled") {
+      return;
+    }
+
+    const checkAuthoritativeLifecycle = async () => {
+      const now = new Date();
+      const start = new Date(election.start_datetime);
+      const end = new Date(election.end_datetime);
+
+      // Check if timeline boundaries are crossed
+      if ((statusName === "scheduled" && now >= start) || ((statusName === "open" || statusName === "active") && now > end)) {
+        try {
+          console.log("Boundary reached: synchronizing authoritative database lifecycle...");
+          await supabase.rpc("check_and_advance_election_lifecycle", {
+            p_election_id: election.id,
+          });
+          await loadData();
+        } catch (err) {
+          console.error("Lifecycle background check failed:", err);
+        }
+      }
+    };
+
+    const timer = setInterval(checkAuthoritativeLifecycle, 15000); // Check every 15 seconds
+    return () => clearInterval(timer);
+  }, [election, statuses, id, loadData]);
+  // -----------------------------------------------------------
 
   const setTab = (tab: TabKey) => {
     setSearchParams({ tab });
@@ -286,6 +329,18 @@ export default function AdminElectionManagePage() {
         </button>
 
         <button
+          onClick={() => setTab("officers")}
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === "officers"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Electoral Officers</span>
+        </button>
+
+        <button
           onClick={() => setTab("lifecycle")}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
             activeTab === "lifecycle"
@@ -320,6 +375,10 @@ export default function AdminElectionManagePage() {
 
         {activeTab === "register" && (
           <ElectionRegisterTab electionId={election.id} />
+        )}
+
+        {activeTab === "officers" && (
+          <ElectionOfficersTab electionId={election.id} />
         )}
 
         {activeTab === "lifecycle" && (

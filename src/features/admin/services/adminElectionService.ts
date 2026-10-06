@@ -16,6 +16,7 @@ export interface CreateElectionInput {
   end_datetime: string;
   election_status_id: string;
   academic_session_id: string;
+  department_id: string;
 }
 
 export interface UpdateElectionInput {
@@ -24,6 +25,7 @@ export interface UpdateElectionInput {
   start_datetime?: string;
   end_datetime?: string;
   election_status_id?: string;
+  department_id?: string;
 }
 
 /**
@@ -104,6 +106,15 @@ export async function getAdminElections(): Promise<AdminElection[]> {
  * Fetches a single election by ID for administrative operations.
  */
 export async function getAdminElectionById(electionId: string): Promise<AdminElection | null> {
+  // Reconcile database lifecycle authoritatively
+  try {
+    await supabase.rpc("check_and_advance_election_lifecycle", {
+      p_election_id: electionId,
+    });
+  } catch (advErr) {
+    console.warn("check_and_advance_election_lifecycle notice:", advErr);
+  }
+
   const { data, error } = await supabase
     .from("elections")
     .select(`
@@ -172,6 +183,9 @@ export async function createAdminElection(input: CreateElectionInput): Promise<{
   if (!input.academic_session_id || !input.academic_session_id.trim()) {
     throw new Error("Academic session is required to create an election.");
   }
+  if (!input.department_id || !input.department_id.trim()) {
+    throw new Error("Department is required to create a department-scoped election.");
+  }
 
   const { data, error } = await supabase
     .from("elections")
@@ -182,6 +196,7 @@ export async function createAdminElection(input: CreateElectionInput): Promise<{
       end_datetime: input.end_datetime,
       election_status_id: input.election_status_id,
       academic_session_id: input.academic_session_id.trim(),
+      department_id: input.department_id.trim(),
     })
     .select("id")
     .single();
@@ -191,6 +206,48 @@ export async function createAdminElection(input: CreateElectionInput): Promise<{
   }
 
   return { id: data.id };
+}
+
+/**
+ * Fetches available departments for election scoping.
+ */
+export async function getDepartments(): Promise<Array<{ id: string; name: string }>> {
+  const { data, error } = await supabase
+    .from("departments")
+    .select("id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.warn("Could not query departments lookup:", error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Creates a new institutional department record.
+ */
+export async function createDepartment(name: string): Promise<{ id: string; name: string }> {
+  const cleanName = name.trim();
+  if (!cleanName) {
+    throw new Error("Department name is required.");
+  }
+
+  const { data, error } = await supabase
+    .from("departments")
+    .insert({ name: cleanName })
+    .select("id, name")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error(`A department with the name '${cleanName}' already exists.`);
+    }
+    throw new Error(`Failed to create department: ${error.message}`);
+  }
+
+  return data;
 }
 
 /**

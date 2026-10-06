@@ -21,6 +21,7 @@ import {
   FileText,
   AlertCircle,
   Activity,
+  Award,
 } from "lucide-react";
 import { formatElectionDateWAT } from "@/features/elections/utils/electionUtils";
 import { ParticipationChart } from "@/components/admin/ParticipationChart";
@@ -134,6 +135,14 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/admin/candidates")}
+              className="gap-1.5 text-xs font-semibold shadow-xs"
+            >
+              <Award className="h-4 w-4 text-primary" />
+              Candidate Approval & Vetting
+            </Button>
             <Button
               onClick={() => navigate("/admin/elections")}
               className="gap-1.5 text-xs font-semibold shadow-xs"

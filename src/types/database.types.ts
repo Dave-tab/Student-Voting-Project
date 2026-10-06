@@ -270,6 +270,7 @@ export interface Database {
           end_datetime: string;
           election_status_id: string;
           academic_session_id: string;
+          department_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -281,6 +282,7 @@ export interface Database {
           end_datetime: string;
           election_status_id: string;
           academic_session_id: string;
+          department_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -292,6 +294,7 @@ export interface Database {
           end_datetime?: string;
           election_status_id?: string;
           academic_session_id?: string;
+          department_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -828,6 +831,12 @@ export interface Database {
           p_selections: Json;
         };
         Returns: Json;
+      };
+      check_and_advance_election_lifecycle: {
+        Args: {
+          p_election_id: string;
+        };
+        Returns: string;
       };
       calculate_election_results: {
         Args: {

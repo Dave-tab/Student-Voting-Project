@@ -7,7 +7,7 @@
 // Enforces:
 // 1. Caller Authorization: Only authenticated users with super_admin (or admin)
 //    role in the database may provision administrative accounts.
-// 2. Approved Role Validation: Allowed roles are 'admin', 'administrator', 'electoral_officer'.
+// 2. Approved Role Validation: Allowed roles are 'admin', 'administrator', 'electoral_officer', 'system_administrator', 'electoral_admin'.
 // 3. Supabase Auth Admin user creation (server-side only, no public signup).
 // 4. public.users application identity with Active account status.
 // 5. public.administrators record creation.
@@ -22,7 +22,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ALLOWED_ADMIN_ROLES = ["super_admin", "admin", "administrator", "electoral_officer"] as const;
+const ALLOWED_ADMIN_ROLES = ["admin", "administrator", "system_administrator", "electoral_admin", "electoral_officer"] as const;
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -119,12 +119,13 @@ serve(async (req: Request) => {
       );
     }
 
-    const callerRoleName = (callerUser.roles as { name?: string } | null)?.name;
-    if (callerRoleName !== "super_admin") {
+    const callerRoleName = (callerUser.roles as { name?: string } | null)?.name?.toLowerCase();
+    const ALLOWED_CALLER_ROLES = ["super_admin", "system_administrator"];
+    if (!callerRoleName || !ALLOWED_CALLER_ROLES.includes(callerRoleName)) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Access denied. Only Active Super Administrators may provision administrative accounts.",
+          error: "Access denied. Only Active Super Administrators and System Administrators may provision administrative accounts.",
         }),
         {
           status: 403,
@@ -134,8 +135,67 @@ serve(async (req: Request) => {
     }
 
     // 5. Parse and validate request body
-    const { email, password, role } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { action, userId, email, password, role } = body;
 
+    // Support deletion/rollback for transactional cleanup
+    if (action === "delete") {
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ success: false, error: "User ID is required for deletion." }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Check if trying to delete a Super Admin (forbidden protection)
+      const { data: targetUser } = await supabaseAdmin
+        .from("users")
+        .select("roles(name)")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      const targetRoleName = (targetUser?.roles as { name?: string } | null)?.name?.toLowerCase();
+      if (targetRoleName === "super_admin") {
+        return new Response(
+          JSON.stringify({ success: false, error: "Access denied. Super Admin identities cannot be deleted." }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Perform deletion
+      await supabaseAdmin.from("administrators").delete().eq("user_id", userId);
+      await supabaseAdmin.from("users").delete().eq("id", userId);
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+      if (deleteError) {
+        return new Response(
+          JSON.stringify({ success: false, error: `Failed to delete auth user: ${deleteError.message}` }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Administrative user successfully deleted/rolled back.",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Default: provision user flow
     if (!email || !password || !role) {
       return new Response(
         JSON.stringify({ success: false, error: "Email, password, and target role are required." }),
@@ -288,6 +348,8 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         message: `Administrative user successfully provisioned with role '${targetRole}'.`,
+        userId: newUserId,
+        user_id: newUserId,
         role: targetRole,
       }),
       {

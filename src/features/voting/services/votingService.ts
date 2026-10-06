@@ -46,9 +46,32 @@ export async function submitBallot(
       };
     }
 
+    // Normalize selections into the array structure expected by submit_ballot RPC
+    const formattedSelections: Array<{ position_id: string; candidate_id: string }> = [];
+
+    if (Array.isArray(payload.selections)) {
+      for (const item of payload.selections as unknown as Array<{ position_id?: string; candidate_id?: string }>) {
+        if (item && typeof item === "object" && item.position_id) {
+          formattedSelections.push({
+            position_id: String(item.position_id),
+            candidate_id: item.candidate_id ? String(item.candidate_id) : "",
+          });
+        }
+      }
+    } else if (payload.selections && typeof payload.selections === "object") {
+      for (const [posId, candId] of Object.entries(payload.selections)) {
+        if (posId && candId) {
+          formattedSelections.push({
+            position_id: posId,
+            candidate_id: candId,
+          });
+        }
+      }
+    }
+
     const { data, error } = await supabase.rpc("submit_ballot", {
       p_election_id: payload.electionId,
-      p_selections: payload.selections || [],
+      p_selections: formattedSelections,
     });
 
     if (error) {

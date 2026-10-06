@@ -85,6 +85,7 @@ function ApplicationSidebar({ className, ...props }: ApplicationSidebarProps) {
             </span>
             <NavLink
               to="/admin"
+              end
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary hover:bg-primary/10",
@@ -96,7 +97,7 @@ function ApplicationSidebar({ className, ...props }: ApplicationSidebarProps) {
               Administration
             </NavLink>
             <NavLink
-              to="/admin/elections"
+              to="/admin/candidates"
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary hover:bg-primary/10",
@@ -105,7 +106,19 @@ function ApplicationSidebar({ className, ...props }: ApplicationSidebarProps) {
               }
             >
               <Award className="h-4 w-4" />
-              Candidate Vetting
+              Candidate Approval & Vetting
+            </NavLink>
+            <NavLink
+              to="/admin/elections"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-primary hover:bg-primary/10",
+                  isActive ? "bg-primary/15 font-semibold" : ""
+                )
+              }
+            >
+              <Vote className="h-4 w-4" />
+              Elections Management
             </NavLink>
           </div>
         )}

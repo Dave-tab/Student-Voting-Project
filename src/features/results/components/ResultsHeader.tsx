@@ -49,7 +49,7 @@ export function ResultsHeader({ election, results }: ResultsHeaderProps) {
                 The Polytechnic, Ibadan &bull; Directorate of Student Affairs
               </span>
               <span className="text-xs font-semibold text-foreground">
-                Independent Electoral Committee (INEC / PolyIbadan)
+                Authoritative Platform Results
               </span>
             </div>
           </div>

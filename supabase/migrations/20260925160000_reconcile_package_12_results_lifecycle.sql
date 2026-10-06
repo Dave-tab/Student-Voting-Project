@@ -66,8 +66,8 @@ BEGIN
         RAISE EXCEPTION 'Published election results are immutable and cannot be recalculated.';
     END IF;
 
-    IF v_election_status != 'Closed' THEN
-        RAISE EXCEPTION 'Election results can only be calculated when the election is in Closed status.';
+    IF v_election_status NOT IN ('Open', 'Closed') THEN
+        RAISE EXCEPTION 'Election results can only be calculated when the election has commenced (Open or Closed status).';
     END IF;
 
     -- Calculation logic
@@ -218,8 +218,8 @@ BEGIN
         RAISE EXCEPTION 'Election not found.';
     END IF;
 
-    IF v_status_name != 'Closed' AND v_status_name != 'Published' THEN
-        RAISE EXCEPTION 'Election results can only be reviewed when the election is in Closed or Published status.';
+    IF v_status_name NOT IN ('Open', 'Closed', 'Published') THEN
+        RAISE EXCEPTION 'Election results can only be reviewed when the election has commenced (Open, Closed, or Published status).';
     END IF;
 
     -- If in Closed status, calculate/refresh results

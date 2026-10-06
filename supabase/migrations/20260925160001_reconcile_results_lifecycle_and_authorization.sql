@@ -51,8 +51,8 @@ BEGIN
         RAISE EXCEPTION 'Election not found.';
     END IF;
 
-    IF v_status_name IN ('Draft', 'Scheduled', 'Open') THEN
-        RAISE EXCEPTION 'Election is open or ongoing. Results cannot be calculated until voting officially concludes.';
+    IF v_status_name IN ('Draft', 'Scheduled') THEN
+        RAISE EXCEPTION 'Election has not yet opened for voting. Results cannot be calculated until voting begins.';
     END IF;
 
     -- If election is published, read-only aggregate query for all authenticated users
@@ -262,8 +262,8 @@ BEGIN
     JOIN public.election_statuses es ON es.id = e.election_status_id
     WHERE e.id = p_election_id;
 
-    IF v_status_name IS NULL OR v_status_name IN ('Draft', 'Scheduled', 'Open') THEN
-        RAISE EXCEPTION 'Election results can only be reviewed when the election is in Closed or Published status.';
+    IF v_status_name IS NULL OR v_status_name IN ('Draft', 'Scheduled') THEN
+        RAISE EXCEPTION 'Election results can only be reviewed when the election has commenced (Open, Closed, or Published status).';
     END IF;
 
     -- Execute calculation to ensure tallies are up to date

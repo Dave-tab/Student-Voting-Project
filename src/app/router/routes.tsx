@@ -18,6 +18,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminElectionsPage from "@/pages/admin/AdminElectionsPage";
 import AdminElectionManagePage from "@/pages/admin/AdminElectionManagePage";
 import AdminSuperAdminOversight from "@/pages/admin/AdminSuperAdminOversight";
+import AdminCandidateVettingPage from "@/pages/admin/AdminCandidateVettingPage";
 
 export const routes: RouteObject[] = [
   {
@@ -81,6 +82,10 @@ export const routes: RouteObject[] = [
       {
         path: "elections/:id",
         element: <AdminElectionManagePage />,
+      },
+      {
+        path: "candidates",
+        element: <AdminCandidateVettingPage />,
       },
       {
         path: "oversight",

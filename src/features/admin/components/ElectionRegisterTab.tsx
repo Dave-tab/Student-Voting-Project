@@ -24,6 +24,7 @@ import {
   FileSpreadsheet,
   X,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface ElectionRegisterTabProps {
   electionId: string;
@@ -50,6 +51,7 @@ export function ElectionRegisterTab({ electionId }: ElectionRegisterTabProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [adding, setAdding] = useState(false);
+  const [electionDeptName, setElectionDeptName] = useState("");
 
   async function loadVoters(search?: string) {
     try {
@@ -79,6 +81,19 @@ export function ElectionRegisterTab({ electionId }: ElectionRegisterTabProps) {
           console.error("Failed to load voter register:", err);
           setError(err instanceof Error ? err.message : "Failed to load voter register.");
           setLoading(false);
+        }
+      });
+
+    supabase
+      .from("elections")
+      .select("departments(name)")
+      .eq("id", electionId)
+      .maybeSingle()
+      .then((res: { data: unknown }) => {
+        const dObj = res.data as { departments?: { name?: string } | null } | null;
+        if (!ignore && dObj?.departments) {
+          const dName = dObj.departments.name || "";
+          if (dName) setElectionDeptName(dName);
         }
       });
 
@@ -175,7 +190,7 @@ export function ElectionRegisterTab({ electionId }: ElectionRegisterTabProps) {
           matriculation_number: obj.matriculation_number || obj.matric_number || obj.matric || obj.student_id || row[0] || "",
           email: obj.email || obj.institutional_email || row[2] || "",
           full_name: obj.full_name || obj.student_name || obj.name || row[1] || "",
-          department: obj.department || obj.dept || row[3] || "Computer Science",
+          department: obj.department || obj.dept || row[3] || electionDeptName || "General",
           level: obj.level || obj.nd_hnd || row[4] || "ND2",
           year_of_admission: parseInt(obj.year_of_admission || obj.admission_year || row[5] || "2024", 10) || 2024,
         });

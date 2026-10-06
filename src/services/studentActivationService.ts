@@ -7,7 +7,7 @@
 // the Supabase Edge Function 'student-activation'.
 // ==============================================================================
 
-import { supabase } from "@/lib/supabase";
+import { supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 
 export interface StudentActivationParams {
   matriculationNumber: string;
@@ -32,16 +32,12 @@ export async function activateStudentAccount(
   const { matriculationNumber, institutionalEmail, password } = params;
 
   try {
-    const client = supabase as unknown as { supabaseUrl: string; supabaseKey: string };
-    const supabaseUrl = client.supabaseUrl;
-    const supabaseKey = client.supabaseKey;
-
     const response = await fetch(`${supabaseUrl}/functions/v1/student-activation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseKey}`,
-        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+        "apikey": supabaseAnonKey,
       },
       body: JSON.stringify({
         matriculation_number: matriculationNumber.trim(),

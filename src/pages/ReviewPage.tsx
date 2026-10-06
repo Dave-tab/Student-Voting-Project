@@ -14,10 +14,10 @@ import type { Election, Position, Candidate } from "@/features/elections/types";
 
 import { Breadcrumb } from "@/components/layouts/Breadcrumb";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/Alert";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
+import { getImageUrl } from "@/utils/imageUtils";
 import {
   Dialog,
   DialogContent,
@@ -26,13 +26,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/Dialog";
+import { SelectedCandidatePreview } from "@/features/voting/components/SelectedCandidatePreview";
 import {
   ArrowLeft,
   ShieldCheck,
   AlertTriangle,
   Send,
   Loader2,
-  Check,
   CircleSlash,
   Edit3,
 } from "lucide-react";
@@ -232,16 +232,6 @@ export default function ReviewPage() {
         </Alert>
       )}
 
-      {/* Irreversible Submission Notice Card */}
-      <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground">Final Vote Confirmation</p>
-          <p className="leading-relaxed">
-            Pursuant to approved institutional election regulations (SRS Section 9.2.3), submitted votes cannot be altered, recalled, or re-cast. Ensure all selections below accurately reflect your intent before confirming.
-          </p>
-        </div>
-      </div>
 
       {/* Review Roster */}
       <div className="space-y-4">
@@ -266,88 +256,27 @@ export default function ReviewPage() {
             const candidate = candidates.find((c) => c.id === selectedCandidateId);
 
             return (
-              <Card
-                key={position.id}
-                className={`border transition-all ${
-                  candidate
-                    ? "border-border bg-card shadow-xs"
-                    : "border-dashed border-border bg-muted/20"
-                }`}
-              >
-                <CardHeader className="py-4 px-4 sm:px-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Elective Office
-                      </span>
-                      <CardTitle className="text-base font-bold text-foreground">
-                        {position.name}
-                      </CardTitle>
-                    </div>
-
-                    {candidate ? (
-                      /* Selected Candidate Display */
-                      <div className="flex items-center gap-3 p-2 rounded-md bg-primary/5 border border-primary/20">
-                        <Avatar className="h-9 w-9 border border-primary/30 shrink-0">
-                          {candidate.candidate_details?.photo_path && (
-                            <AvatarImage
-                              src={candidate.candidate_details.photo_path}
-                              alt={
-                                candidate.student
-                                  ? (candidate.student.full_name || 
-                                     `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
-                                     candidate.student.matriculation_number ||
-                                     "Candidate")
-                                  : "Candidate"
-                               }
-                            />
-                          )}
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                            {candidate.student
-                              ? (candidate.student.full_name || 
-                                 `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
-                                 candidate.student.matriculation_number ||
-                                 "C")
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .slice(0, 2)
-                                  .join("")
-                                  .toUpperCase()
-                              : "C"}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        <div className="min-w-0 pr-2">
-                          <p className="text-xs font-semibold text-foreground truncate">
-                            {candidate.student
-                              ? (candidate.student.full_name || 
-                                 `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
-                                 candidate.student.matriculation_number ||
-                                 "Candidate")
-                              : "Candidate Name"}
-                          </p>
-                          {candidate.student?.matriculation_number && (
-                            <p className="text-[11px] font-mono text-muted-foreground">
-                              {candidate.student.matriculation_number}
-                            </p>
-                          )}
-                        </div>
-
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded ml-auto shrink-0">
-                          <Check className="h-3 w-3" />
-                          Selected
-                        </span>
-                      </div>
-                    ) : (
-                      /* Abstention Display (B47 requirement) */
-                      <div className="flex items-center gap-2 text-xs italic text-muted-foreground py-1 px-3 rounded bg-muted/40 border border-border">
-                        <CircleSlash className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>No candidate selected &mdash; Abstention</span>
-                      </div>
-                    )}
+              <div key={position.id} className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Elective Office:
+                    </span>
+                    <span className="text-sm font-bold text-foreground">
+                      {position.name}
+                    </span>
                   </div>
-                </CardHeader>
-              </Card>
+                </div>
+
+                {candidate ? (
+                  <SelectedCandidatePreview candidate={candidate} position={position} />
+                ) : (
+                  <div className="flex items-center gap-2 text-xs italic text-muted-foreground py-3 px-4 rounded-xl bg-muted/30 border border-dashed border-border">
+                    <CircleSlash className="h-4 w-4 text-muted-foreground" />
+                    <span>No candidate selected for this office &mdash; Abstention</span>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -384,24 +313,24 @@ export default function ReviewPage() {
         </Button>
       </div>
 
-      {/* Final Submission Confirmation Dialog (B47) */}
+      {/* Final Submission Confirmation Dialog */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div className="flex items-center gap-2 text-primary mb-1">
+              <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
               <span className="text-xs font-bold uppercase tracking-wider">
-                Permanent Final Action
+                Official Ballot Confirmation
               </span>
             </div>
             <DialogTitle className="text-lg font-bold text-foreground">
               Confirm Final Vote Submission
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-2 space-y-2">
-              <p>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-2 space-y-3">
+              <div>
                 You are about to submit your official ballot for{" "}
                 <strong className="text-foreground">{election.title}</strong>.
-              </p>
+              </div>
               <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
                 <li>
                   <strong>{selectedCount}</strong> office(s) selected;{" "}
@@ -411,6 +340,45 @@ export default function ReviewPage() {
                 <li>Submitted selections cannot be edited, recalled, or re-cast.</li>
                 <li>Your ballot is anonymized and unlinked from your student identity.</li>
               </ul>
+
+              {/* Photo Preview of Selected Candidates */}
+              {selectedCount > 0 && (
+                <div className="pt-2 border-t border-border space-y-2">
+                  <p className="text-[11px] font-semibold text-foreground uppercase tracking-wider">
+                    Selected Candidates Photo Review:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 rounded-md bg-muted/40 border border-border">
+                    {positions
+                      .filter((p) => selections[p.id])
+                      .map((p) => {
+                        const cand = candidates.find((c) => c.id === selections[p.id]);
+                        if (!cand) return null;
+                        const name =
+                          cand.student?.full_name ||
+                          `${cand.student?.first_name || ""} ${cand.student?.last_name || ""}`.trim() ||
+                          "Candidate";
+                        const photo = cand.candidate_details?.photo_path;
+                        return (
+                          <div
+                            key={p.id}
+                            className="flex items-center gap-2 p-1.5 rounded-md bg-background border border-border text-xs"
+                          >
+                            <Avatar className="h-8 w-8 border border-primary/20 shrink-0">
+                              {photo && <AvatarImage src={getImageUrl(photo) || ""} alt={name} />}
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                                {name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 pr-1">
+                              <p className="text-[11px] font-semibold text-foreground truncate">{name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{p.name}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
 

@@ -259,7 +259,7 @@ export default function Elections() {
                     Verified Register Match
                   </span>
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    {(status === "Closed" || status === "Ended" || status === "Archived") && (
+                    {(status === "Results Available" || status === "Published" || status === "Closed" || status === "Ended" || status === "Archived") && (
                       <Button
                         variant="outline"
                         size="sm"

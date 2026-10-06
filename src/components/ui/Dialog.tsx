@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useCallback,
   type HTMLAttributes,
   type ReactNode,
 } from "react";
@@ -61,12 +62,12 @@ export function Dialog({
   const descriptionId = useUniqueId("dialog-description");
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  function setOpen(next: boolean) {
+  const setOpen = useCallback((next: boolean) => {
     if (!isControlled) {
       setUncontrolledOpen(next);
     }
     onOpenChange?.(next);
-  }
+  }, [isControlled, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -134,6 +135,10 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
   } = useDialogContext("DialogContent");
 
   const contentRef = useRef<HTMLDivElement>(null);
+  const setOpenRef = useRef(setOpen);
+  useEffect(() => {
+    setOpenRef.current = setOpen;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -145,7 +150,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false);
+        setOpenRef.current(false);
         return;
       }
       if (e.key !== "Tab" || !node) return;
@@ -173,7 +178,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
       document.removeEventListener("keydown", handleKeyDown);
       triggerElement?.focus();
     };
-  }, [open, setOpen, triggerRef]);
+  }, [open, triggerRef]);
 
   if (!open) return null;
 
@@ -182,7 +187,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
       <div
         className="fixed inset-0 bg-foreground/50"
         aria-hidden="true"
-        onClick={() => setOpen(false)}
+        onClick={() => setOpenRef.current(false)}
       />
       <div
         ref={contentRef}
@@ -235,10 +240,15 @@ export function DialogTitle({ className, ...props }: DialogTitleProps) {
   );
 }
 
-export interface DialogDescriptionProps
-  extends HTMLAttributes<HTMLParagraphElement> {}
+export interface DialogDescriptionProps extends HTMLAttributes<HTMLDivElement> {
+  as?: "div" | "p";
+}
 
-export function DialogDescription({ className, ...props }: DialogDescriptionProps) {
+export function DialogDescription({
+  className,
+  as: Component = "div",
+  ...props
+}: DialogDescriptionProps) {
   const { descriptionId, setHasDescription } = useDialogContext("DialogDescription");
 
   useEffect(() => {
@@ -247,7 +257,7 @@ export function DialogDescription({ className, ...props }: DialogDescriptionProp
   }, [setHasDescription]);
 
   return (
-    <p
+    <Component
       id={descriptionId}
       className={cn("text-sm text-foreground/70", className)}
       {...props}

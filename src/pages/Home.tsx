@@ -141,7 +141,7 @@ export default function Home() {
             </div>
           </div>
           <p className="text-sm text-muted-foreground max-w-xl">
-            Your institutional portal for participating in student governance, examining candidate manifestos, casting secure ballots, and viewing certified election results.
+            Your institutional portal for participating in student governance, examining candidate manifestos, casting secure ballots, and viewing authoritative election results.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -389,7 +389,7 @@ export default function Home() {
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-muted-foreground">
-              Concluded election cycles with certified results.
+              Concluded election cycles with authoritative results.
             </CardDescription>
           </CardHeader>
 
@@ -403,7 +403,7 @@ export default function Home() {
                 <FileText className="h-8 w-8 text-muted-foreground/60 mb-2" />
                 <h4 className="text-sm font-semibold text-foreground">No completed elections</h4>
                 <p className="text-xs text-muted-foreground max-w-xs mt-1">
-                  Certified results will be available here after election conclusion and publication.
+                  Authoritative results will be available here after election conclusion and publication.
                 </p>
               </div>
             ) : (

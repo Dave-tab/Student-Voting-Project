@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
-import { getRoleDisplayName, isSuperAdmin } from "../types";
+import { getRoleDisplayName, canManageAdministrators } from "../types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar, AvatarFallback } from "@/components/ui/Avatar";
@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Building2,
+  Award,
 } from "lucide-react";
 import {
   ApplicationShell,
@@ -38,7 +39,7 @@ export function AdminLayout() {
 
   const userInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : "AD";
   const roleName = getRoleDisplayName(user?.role);
-  const superAdmin = isSuperAdmin(user?.role);
+  const canManageAdmins = canManageAdministrators(user?.role);
 
   const navLinks = [
     {
@@ -48,12 +49,18 @@ export function AdminLayout() {
       end: true,
     },
     {
+      to: "/admin/candidates",
+      label: "Candidate Approval & Vetting",
+      icon: Award,
+      end: false,
+    },
+    {
       to: "/admin/elections",
       label: "Elections",
       icon: Vote,
       end: false,
     },
-    ...(superAdmin
+    ...(canManageAdmins
       ? [
           {
             to: "/admin/oversight",

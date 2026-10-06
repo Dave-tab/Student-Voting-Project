@@ -5,15 +5,19 @@
 
 export type PlatformRole =
   | "super_admin"
+  | "system_administrator"
   | "admin"
   | "administrator"
+  | "electoral_admin"
   | "electoral_officer"
   | "student";
 
 export const ADMINISTRATIVE_ROLES = [
   "super_admin",
+  "system_administrator",
   "admin",
   "administrator",
+  "electoral_admin",
   "electoral_officer",
 ] as const;
 
@@ -21,37 +25,63 @@ export type AdministrativeRole = (typeof ADMINISTRATIVE_ROLES)[number];
 
 export function isAdministrativeRole(role?: string | null): boolean {
   if (!role) return false;
-  const normalized = role.toLowerCase().trim();
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
   return ADMINISTRATIVE_ROLES.includes(normalized as AdministrativeRole);
 }
 
 export function isSuperAdmin(role?: string | null): boolean {
   if (!role) return false;
-  return role.toLowerCase().trim() === "super_admin";
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  return normalized === "super_admin";
 }
 
 export function isElectoralOfficer(role?: string | null): boolean {
   if (!role) return false;
-  return role.toLowerCase().trim() === "electoral_officer";
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  return normalized === "electoral_officer" || normalized === "electoral_admin";
+}
+
+export function isSystemAdministrator(role?: string | null): boolean {
+  if (!role) return false;
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  return normalized === "system_administrator";
+}
+
+export function isAdmin(role?: string | null): boolean {
+  if (!role) return false;
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  return normalized === "admin" || normalized === "administrator";
+}
+
+export function canManageAdministrators(role?: string | null): boolean {
+  return isSuperAdmin(role) || isSystemAdministrator(role);
 }
 
 export function isAdminOrSuperAdmin(role?: string | null): boolean {
   if (!role) return false;
-  const normalized = role.toLowerCase().trim();
-  return normalized === "super_admin" || normalized === "admin" || normalized === "administrator";
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  return (
+    normalized === "super_admin" ||
+    normalized === "admin" ||
+    normalized === "administrator" ||
+    normalized === "system_administrator"
+  );
 }
 
 export function getRoleDisplayName(role?: string | null): string {
   if (!role) return "Student";
-  const normalized = role.toLowerCase().trim();
+  const normalized = role.toLowerCase().trim().replace(/[-\s]+/g, "_");
   switch (normalized) {
     case "super_admin":
       return "Super Administrator";
+    case "system_administrator":
+      return "System Administrator";
     case "admin":
     case "administrator":
-      return "System Administrator";
+      return "Admin";
+    case "electoral_admin":
     case "electoral_officer":
-      return "Electoral Officer";
+      return "Electoral Admin";
     default:
       return "Student";
   }
@@ -69,12 +99,15 @@ export interface AdminElection {
   end_datetime: string;
   election_status_id: string;
   academic_session_id?: string | null;
+  department_id?: string | null;
+  department_name?: string | null;
   status_name: string;
   created_at: string;
   updated_at: string;
   position_count?: number;
   candidate_count?: number;
-  voter_count?: number;
+  voter_count?: number; // Total eligible students in register
+  votes_cast?: number; // Total students who have actually participated
 }
 
 /**
@@ -97,6 +130,7 @@ export interface AdminPosition {
 export interface AdminCandidate {
   id: string;
   election_id: string;
+  election_name?: string;
   position_id: string;
   position_name: string;
   student_id: string;

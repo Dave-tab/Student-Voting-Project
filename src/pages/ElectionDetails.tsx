@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
@@ -12,6 +12,7 @@ import {
 import { CandidateApplicationDialog } from "@/features/elections/components/CandidateApplicationDialog";
 import { supabase } from "@/lib/supabase";
 import type { Election, Position, Candidate } from "@/features/elections/types";
+import { getImageUrl } from "@/utils/imageUtils";
 import {
   getElectionStatus,
   getElectionStatusBadgeConfig,
@@ -59,6 +60,11 @@ import {
   ShieldAlert,
   Info,
   CheckCircle,
+  CheckCircle2,
+  AlertCircle,
+  RotateCcw,
+  Edit3,
+  UserX,
   Award,
 } from "lucide-react";
 
@@ -82,9 +88,149 @@ export default function ElectionDetails() {
   const [resolvedMatric, setResolvedMatric] = useState<string | null>(null);
   const [candidacy, setCandidacy] = useState<StudentCandidacyStatus | null>(null);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "redo" | "edit">("create");
+
+  interface CandidateAppSnapshot {
+    mode: "create" | "redo" | "edit";
+    positions: Position[];
+    studentId: string;
+    matricNumber: string;
+    existingCandidateId?: string;
+    initialPositionId?: string;
+    initialCampaignSlogan: string;
+    initialManifesto: string;
+    initialPhotoPath: string;
+    rejectionRemarks?: string;
+  }
+
+  const [applicationSnapshot, setApplicationSnapshot] = useState<CandidateAppSnapshot | null>(null);
 
   const [refreshIndex, setRefreshIndex] = useState(0);
   const countdownText = useLiveCountdown(election);
+
+  const handleOpenApplyDialog = () => {
+    setDialogMode("create");
+    setApplicationSnapshot({
+      mode: "create",
+      positions,
+      studentId: resolvedStudentId || "",
+      matricNumber: resolvedMatric || "",
+      initialCampaignSlogan: "",
+      initialManifesto: "",
+      initialPhotoPath: "",
+    });
+    setApplyDialogOpen(true);
+  };
+
+  const handleOpenRedoDialog = () => {
+    setDialogMode("redo");
+    setApplicationSnapshot({
+      mode: "redo",
+      positions,
+      studentId: resolvedStudentId || "",
+      matricNumber: resolvedMatric || "",
+      existingCandidateId: candidacy?.id,
+      initialPositionId: candidacy?.position_id,
+      initialCampaignSlogan: candidacy?.campaign_slogan || "",
+      initialManifesto: candidacy?.manifesto || "",
+      initialPhotoPath: candidacy?.photo_path || "",
+      rejectionRemarks: candidacy?.approval_remarks || undefined,
+    });
+    setApplyDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = () => {
+    setDialogMode("edit");
+    setApplicationSnapshot({
+      mode: "edit",
+      positions,
+      studentId: resolvedStudentId || "",
+      matricNumber: resolvedMatric || "",
+      existingCandidateId: candidacy?.id,
+      initialPositionId: candidacy?.position_id,
+      initialCampaignSlogan: candidacy?.campaign_slogan || "",
+      initialManifesto: candidacy?.manifesto || "",
+      initialPhotoPath: candidacy?.photo_path || "",
+    });
+    setApplyDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setApplyDialogOpen(false);
+    setApplicationSnapshot(null);
+  };
+
+  const handleOnSuccess = useCallback(() => setRefreshIndex((p) => p + 1), []);
+
+  const activeSnapshot = applicationSnapshot || {
+    mode: dialogMode,
+    positions,
+    studentId: resolvedStudentId || "",
+    matricNumber: resolvedMatric || "",
+    existingCandidateId: candidacy?.id,
+    initialPositionId: candidacy?.position_id,
+    initialCampaignSlogan: candidacy?.campaign_slogan || "",
+    initialManifesto: candidacy?.manifesto || "",
+    initialPhotoPath: candidacy?.photo_path || "",
+    rejectionRemarks: candidacy?.approval_remarks || undefined,
+  };
+
+  const applicationDialog = election ? (
+    <CandidateApplicationDialog
+      key={`candidate-app-${election.id}`}
+      isOpen={applyDialogOpen}
+      onClose={handleCloseDialog}
+      electionId={election.id}
+      electionTitle={election.title}
+      positions={activeSnapshot.positions}
+      studentId={activeSnapshot.studentId}
+      matricNumber={activeSnapshot.matricNumber}
+      mode={activeSnapshot.mode}
+      existingCandidateId={activeSnapshot.existingCandidateId}
+      initialPositionId={activeSnapshot.initialPositionId}
+      initialCampaignSlogan={activeSnapshot.initialCampaignSlogan}
+      initialManifesto={activeSnapshot.initialManifesto}
+      initialPhotoPath={activeSnapshot.initialPhotoPath}
+      rejectionRemarks={activeSnapshot.rejectionRemarks}
+      onSuccess={handleOnSuccess}
+    />
+  ) : null;
+
+  // Real-time synchronization for candidate filings and committee vetting determinations
+  useEffect(() => {
+    if (!electionId) return;
+
+    const channel = supabase
+      .channel(`election-${electionId}-live-sync`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "candidates",
+          filter: `election_id=eq.${electionId}`,
+        },
+        () => {
+          setRefreshIndex((p) => p + 1);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "candidate_details",
+        },
+        () => {
+          setRefreshIndex((p) => p + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [electionId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -162,6 +308,7 @@ export default function ElectionDetails() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-6" aria-busy="true">
+        {applicationDialog}
         <Skeleton className="h-6 w-48" />
         <Card className="p-6 space-y-4">
           <div className="flex justify-between items-start">
@@ -185,6 +332,7 @@ export default function ElectionDetails() {
   if (error) {
     return (
       <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+        {applicationDialog}
         <Breadcrumb
           items={[
             { label: "Dashboard", href: "/" },
@@ -216,6 +364,7 @@ export default function ElectionDetails() {
   if (!election) {
     return (
       <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-6">
+        {applicationDialog}
         <Breadcrumb
           items={[
             { label: "Dashboard", href: "/" },
@@ -250,6 +399,7 @@ export default function ElectionDetails() {
 
   const status = getElectionStatus(election);
   const badgeConfig = getElectionStatusBadgeConfig(status);
+  const isCandidatePoolFrozen = status !== "Draft" && status !== "Scheduled" && status !== "Upcoming";
 
   // Group approved candidates by position
   const candidatesByPosition: Record<string, Candidate[]> = {};
@@ -261,6 +411,7 @@ export default function ElectionDetails() {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 space-y-8">
+      {applicationDialog}
       {/* Breadcrumb Navigation */}
       <Breadcrumb
         items={[
@@ -314,14 +465,12 @@ export default function ElectionDetails() {
         </div>
       )}
 
-      {(status === "Closed" || status === "Ended") && (
+      {(status === "Results Available" || status === "Published" || status === "Closed" || status === "Ended") && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-foreground/[0.03] text-foreground/80 text-sm">
           <div className="flex items-start sm:items-center gap-3">
             <Clock className="h-5 w-5 shrink-0 text-foreground/50 mt-0.5 sm:mt-0" />
             <div>
-              <strong>Voting Concluded:</strong> This election officially closed at{" "}
-              {formatElectionDate(election.end_datetime)}. Ballot submissions are no
-              longer accepted.
+              <strong>Official Results Available:</strong> Voting has concluded and official results have been compiled.
             </div>
           </div>
           <Button
@@ -357,10 +506,10 @@ export default function ElectionDetails() {
 
       {/* Student Candidacy Filing Card */}
       {candidacy && (
-        <Card className="border border-primary/30 bg-primary/5 p-4 rounded-xl shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
+        <Card className="border border-primary/30 bg-primary/5 p-5 rounded-xl shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <Award className="h-4 w-4 text-primary" />
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">
                   Your Candidacy Filing
@@ -368,40 +517,152 @@ export default function ElectionDetails() {
                 <Badge
                   variant={
                     candidacy.status_name.toLowerCase() === "approved"
-                      ? "success"
+                      ? "default"
                       : candidacy.status_name.toLowerCase().includes("pending")
-                      ? "warning"
+                      ? "secondary"
                       : "destructive"
                   }
-                  className="text-[10px]"
+                  className={`text-[10px] font-bold ${
+                    candidacy.status_name.toLowerCase() === "approved"
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : candidacy.status_name.toLowerCase().includes("pending")
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                      : ""
+                  }`}
                 >
                   Status: {candidacy.status_name}
                 </Badge>
               </div>
-              <h3 className="text-base font-bold text-foreground">
-                Contesting for: {candidacy.position_name}
-              </h3>
-              {candidacy.campaign_slogan && (
-                <p className="text-xs text-muted-foreground italic">
-                  "{candidacy.campaign_slogan}"
-                </p>
-              )}
+
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Contesting for: {candidacy.position_name}
+                </h3>
+                {candidacy.campaign_slogan && (
+                  <p className="text-xs text-muted-foreground italic mt-0.5">
+                    "{candidacy.campaign_slogan}"
+                  </p>
+                )}
+              </div>
+
               {candidacy.manifesto && (
-                <div className="pt-1 text-xs text-foreground/80 line-clamp-2">
-                  <strong>Manifesto:</strong> {candidacy.manifesto}
+                <div className="text-xs text-foreground/80 line-clamp-3 bg-card/60 p-2.5 rounded-md border border-border/50">
+                  <strong className="text-foreground">Manifesto Summary:</strong> {candidacy.manifesto}
+                </div>
+              )}
+
+              {/* If Rejected: Show Vetting Remarks & Redo Action */}
+              {candidacy.status_name.toLowerCase() === "rejected" && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 space-y-2 text-xs text-destructive">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                    <span>Nomination Determination: Disqualified / Rejected</span>
+                  </div>
+                  {candidacy.approval_remarks ? (
+                    <div className="bg-background/80 p-2.5 rounded border border-destructive/20 text-foreground text-[11px] leading-relaxed">
+                      <strong className="text-destructive font-semibold">Electoral Commission Remarks:</strong> "{candidacy.approval_remarks}"
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-foreground/80">
+                      Your application was not approved during vetting.
+                    </p>
+                  )}
+                  <div className="pt-1">
+                    {!isCandidatePoolFrozen ? (
+                      <Button
+                        size="sm"
+                        onClick={handleOpenRedoDialog}
+                        className="gap-1.5 text-xs font-semibold bg-destructive hover:bg-destructive/90 text-white"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>Redo &amp; Resubmit Application</span>
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-medium pt-1">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                        <span>Candidate nomination window is permanently closed for this election.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* If Withdrawn: Show Notice and Re-apply Action */}
+              {candidacy.status_name.toLowerCase() === "withdrawn" && (
+                <div className="rounded-lg border border-border bg-muted/40 p-3.5 space-y-2 text-xs">
+                  <div className="flex items-center gap-2 font-bold text-muted-foreground">
+                    <UserX className="h-4 w-4 shrink-0" />
+                    <span>Candidacy Withdrawn</span>
+                  </div>
+                  {candidacy.withdrawal_reason && (
+                    <p className="text-[11px] text-muted-foreground italic">
+                      Recorded Reason: "{candidacy.withdrawal_reason}"
+                    </p>
+                  )}
+                  <div className="pt-1">
+                    {!isCandidatePoolFrozen ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleOpenRedoDialog}
+                        className="gap-1.5 text-xs font-semibold"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>Re-apply to Contest</span>
+                      </Button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-medium pt-1">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                        <span>Candidate nomination window is permanently closed for this election.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* If Pending: Allow Editing prior to freeze */}
+              {candidacy.status_name.toLowerCase().includes("pending") && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {!isCandidatePoolFrozen ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleOpenEditDialog}
+                      className="gap-1.5 text-xs h-8"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                      <span>Edit Nomination Filing</span>
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] font-medium pt-1">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground/70" />
+                      <span>Nomination filings and determinations are permanently frozen for active/concluded elections.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* If Approved: Official Contestant Confirmation */}
+              {candidacy.status_name.toLowerCase() === "approved" && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-start gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Official Ballot Contestant:</strong> Your candidacy has been officially approved by the Electoral Commission for <strong>{candidacy.position_name}</strong>. Your profile is published on the ballot and contestant roster below.
+                  </div>
                 </div>
               )}
             </div>
+
             <div className="text-xs text-muted-foreground sm:text-right shrink-0">
               <span>Submitted: {new Date(candidacy.created_at).toLocaleDateString()}</span>
               {candidacy.status_name.toLowerCase().includes("pending") && (
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium mt-0.5">
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium mt-1">
                   Awaiting Electoral Officer Vetting
                 </p>
               )}
               {candidacy.status_name.toLowerCase() === "approved" && (
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
-                  Ballot Eligible (Approved)
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mt-1">
+                  Ballot Qualified (Approved)
                 </p>
               )}
             </div>
@@ -410,7 +671,7 @@ export default function ElectionDetails() {
       )}
 
       {/* Candidacy Application CTA if not already applied and prior to voting window opening */}
-      {!candidacy && (status === "Draft" || status === "Scheduled" || status === "Upcoming") && (
+      {!candidacy && !isCandidatePoolFrozen && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-primary/30 bg-card shadow-xs">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
@@ -425,7 +686,7 @@ export default function ElectionDetails() {
             </p>
           </div>
           <Button
-            onClick={() => setApplyDialogOpen(true)}
+            onClick={handleOpenApplyDialog}
             disabled={!resolvedStudentId || positions.length === 0}
             className="shrink-0 gap-1.5 text-xs font-semibold"
             size="sm"
@@ -437,7 +698,7 @@ export default function ElectionDetails() {
       )}
 
       {/* Candidacy Application Closed Message (Decision 2) */}
-      {!candidacy && (status === "Open" || status === "Active" || status === "Closed" || status === "Ended" || status === "Published") && (
+      {!candidacy && isCandidatePoolFrozen && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-border bg-muted/30 text-muted-foreground text-sm italic">
           <Info className="h-4 w-4 shrink-0" />
           <span>Candidate applications are closed for this election.</span>
@@ -506,7 +767,7 @@ export default function ElectionDetails() {
               </EmptyStateIcon>
               <EmptyStateTitle>No Positions Configured</EmptyStateTitle>
               <EmptyStateDescription>
-                The electoral committee has not yet published elective positions for this election.
+                The platform has not yet published elective positions for this election.
               </EmptyStateDescription>
             </EmptyState>
           </Card>
@@ -542,7 +803,7 @@ export default function ElectionDetails() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {posCandidates.map((candidate) => {
+                      {posCandidates.map((candidate: Candidate) => {
                         const candidateName = candidate.student
                           ? (candidate.student.full_name || 
                              `${candidate.student.first_name || ""} ${candidate.student.last_name || ""}`.trim() ||
@@ -552,7 +813,7 @@ export default function ElectionDetails() {
 
                         const initials = candidateName
                           .split(" ")
-                          .map((n) => n[0])
+                          .map((n: string) => n[0])
                           .slice(0, 2)
                           .join("")
                           .toUpperCase() || "C";
@@ -568,7 +829,7 @@ export default function ElectionDetails() {
                               <Avatar className="h-12 w-12 border border-border shrink-0">
                                 {candidate.candidate_details?.photo_path && (
                                   <AvatarImage
-                                    src={candidate.candidate_details.photo_path}
+                                    src={getImageUrl(candidate.candidate_details.photo_path) || ""}
                                     alt={candidateName}
                                   />
                                 )}
@@ -650,7 +911,7 @@ export default function ElectionDetails() {
                 <Avatar className="h-16 w-16 border border-border shrink-0">
                   {selectedCandidate.candidate_details?.photo_path && (
                     <AvatarImage
-                      src={selectedCandidate.candidate_details.photo_path}
+                      src={getImageUrl(selectedCandidate.candidate_details.photo_path) || ""}
                       alt="Candidate"
                     />
                   )}
@@ -755,18 +1016,23 @@ export default function ElectionDetails() {
       </Dialog>
 
       {/* Candidate Nomination Application Modal */}
-      {resolvedStudentId && resolvedMatric && (
-        <CandidateApplicationDialog
-          isOpen={applyDialogOpen}
-          onClose={() => setApplyDialogOpen(false)}
-          electionId={election.id}
-          electionTitle={election.title}
-          positions={positions}
-          studentId={resolvedStudentId}
-          matricNumber={resolvedMatric}
-          onSuccess={() => setRefreshIndex((p) => p + 1)}
-        />
-      )}
+      <CandidateApplicationDialog
+        isOpen={applyDialogOpen}
+        onClose={() => setApplyDialogOpen(false)}
+        electionId={election.id}
+        electionTitle={election.title}
+        positions={positions}
+        studentId={resolvedStudentId || ""}
+        matricNumber={resolvedMatric || ""}
+        mode={dialogMode}
+        existingCandidateId={candidacy?.id}
+        initialPositionId={candidacy?.position_id}
+        initialCampaignSlogan={candidacy?.campaign_slogan || ""}
+        initialManifesto={candidacy?.manifesto || ""}
+        initialPhotoPath={candidacy?.photo_path || ""}
+        rejectionRemarks={candidacy?.approval_remarks || undefined}
+        onSuccess={handleOnSuccess}
+      />
     </div>
   );
 }

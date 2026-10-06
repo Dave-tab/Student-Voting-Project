@@ -10,15 +10,24 @@
 import { supabase } from "@/lib/supabase";
 
 export interface AdminProvisioningParams {
-  email: string;
-  password: string;
-  role: "super_admin" | "admin" | "administrator" | "electoral_officer";
+  email?: string;
+  password?: string;
+  role?:
+    | "super_admin"
+    | "admin"
+    | "administrator"
+    | "system_administrator"
+    | "electoral_admin"
+    | "electoral_officer";
+  action?: "provision" | "delete";
+  userId?: string;
 }
 
 export interface AdminProvisioningResult {
   success: boolean;
   message: string;
   userId?: string;
+  user_id?: string;
   role?: string;
   error?: string;
 }
@@ -30,7 +39,7 @@ export interface AdminProvisioningResult {
 export async function provisionAdminAccount(
   params: AdminProvisioningParams
 ): Promise<AdminProvisioningResult> {
-  const { email, password, role } = params;
+  const { email, password, role, action, userId } = params;
 
   try {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -49,9 +58,11 @@ export async function provisionAdminAccount(
         Authorization: `Bearer ${token}`,
       },
       body: {
-        email: email.trim().toLowerCase(),
+        email: email?.trim().toLowerCase(),
         password: password,
         role: role,
+        action: action,
+        userId: userId,
       },
     });
 
@@ -91,6 +102,7 @@ export async function provisionAdminAccount(
       success: true,
       message: data.message || "Administrative account successfully provisioned.",
       userId: data.user_id,
+      user_id: data.user_id,
       role: data.role,
     };
   } catch (err: unknown) {
@@ -156,7 +168,8 @@ export async function getAdministrativeAccounts(): Promise<AdministrativeAccount
       const statusObj = Array.isArray(u.account_statuses) ? u.account_statuses[0] : u.account_statuses;
 
       let assignments: { id: string; name: string }[] = [];
-      if (roleObj?.name?.toLowerCase() === "electoral_officer") {
+      const roleLower = roleObj?.name?.toLowerCase();
+      if (roleLower === "electoral_officer" || roleLower === "electoral_admin") {
         const { data: assignData } = await supabase
           .from("election_officer_assignments")
           .select(`

@@ -2,7 +2,7 @@
  * ResultsUnavailableState (B51)
  * Handles results access lifecycle states:
  * - voting_ongoing: Voting is currently active.
- * - not_yet_published: Awaiting authoritative review and publication by Electoral Committee (ODR-002).
+ * - not_yet_published: Awaiting authoritative automatic calculation and publication (ODR-002).
  * - no_results: No recorded votes or positions.
  * - error: Request failure.
  */
@@ -109,11 +109,11 @@ export function ResultsUnavailableState({
             Review in Progress
           </Badge>
           <CardTitle className="text-2xl font-bold text-foreground">
-            Results Under Committee Review
+            Results Calculation in Progress
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             {message ||
-              "Ballot tallies for this election are currently undergoing authoritative review and publication by the Independent Electoral Committee. Official results will be published once review is complete."}
+              "Ballot tallies for this election are currently being calculated authoritatively by the platform database engine. Results will be available once the process is complete."}
           </CardDescription>
         </div>
 

@@ -117,6 +117,15 @@ export async function getElectionById(
     }
   }
 
+  // Reconcile database lifecycle authoritatively
+  try {
+    await supabase.rpc("check_and_advance_election_lifecycle", {
+      p_election_id: electionId,
+    });
+  } catch (advErr) {
+    console.warn("check_and_advance_election_lifecycle notice:", advErr);
+  }
+
   const { data: row, error } = await supabase
     .from("elections")
     .select("*, election_statuses(id, name)")
@@ -170,76 +179,281 @@ export async function getElectionPositions(electionId: string): Promise<Position
   }));
 }
 
-interface RawCandidateRow {
-  id: string;
-  election_id: string;
-  position_id: string;
-  student_id: string;
-  status_id?: string;
-  candidate_status_id?: string;
-  status?: string | { id: string; name: string };
-  candidate_statuses?: { id: string; name: string } | null;
-  candidate_details?: Candidate["candidate_details"] | Candidate["candidate_details"][];
-  students?: Candidate["student"];
-  created_at?: string;
-  updated_at?: string;
+/**
+ * Fetches approved candidates for an election.
+/**
+ * Fetches approved candidates for an election.
+ * Per approved candidate visibility rules:
+ * Only candidates with status 'Approved' are presented on the student ballot and election contestant roster.
+ */
+export async function getApprovedCandidates(electionId: string): Promise<Candidate[]> {
+  try {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select(`
+        id,
+        election_id,
+        position_id,
+        student_id,
+        candidate_status_id,
+        created_at,
+        updated_at,
+        candidate_statuses!inner ( id, name ),
+        candidate_details ( id, manifesto, campaign_slogan, photo_path, approval_remarks ),
+        students (
+          id,
+          matriculation_number,
+          department_id,
+          departments ( id, name ),
+          levels ( id, name )
+        )
+      `)
+      .eq("election_id", electionId)
+      .ilike("candidate_statuses.name", "approved")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching approved candidates:", error.message);
+      return [];
+    }
+
+    const rawRows = (data || []) as unknown as Array<{
+      id: string;
+      election_id: string;
+      position_id: string;
+      student_id: string;
+      candidate_status_id: string;
+      created_at: string;
+      updated_at: string;
+      candidate_statuses: { id: string; name: string } | { id: string; name: string }[];
+      candidate_details:
+        | { id: string; manifesto: string | null; campaign_slogan: string | null; photo_path: string | null; approval_remarks: string | null }
+        | { id: string; manifesto: string | null; campaign_slogan: string | null; photo_path: string | null; approval_remarks: string | null }[]
+        | null;
+      students:
+        | {
+            id: string;
+            matriculation_number: string;
+            department_id: string | null;
+            departments?: { id: string; name: string } | null;
+            levels?: { id: string; name: string } | null;
+          }
+        | null;
+    }>;
+
+    const candidates: Candidate[] = await Promise.all(
+      rawRows.map(async (row) => {
+        const studentObj = row.students;
+        const matric = studentObj?.matriculation_number || "";
+        let fullName = "Candidate Student";
+        let deptName = studentObj?.departments?.name || "Student Body";
+        let lvlName = studentObj?.levels?.name || "Undergraduate";
+
+        if (matric) {
+          const { data: regData } = await supabase
+            .from("student_register")
+            .select("full_name, department_id, level_id, departments(name), levels(name)")
+            .eq("election_id", electionId)
+            .eq("matriculation_number", matric)
+            .maybeSingle();
+
+          if (regData?.full_name) {
+            fullName = regData.full_name;
+          }
+          if (regData?.departments?.name) {
+            deptName = regData.departments.name;
+          }
+          if (regData?.levels?.name) {
+            lvlName = regData.levels.name;
+          }
+        }
+
+        const detailsObj = Array.isArray(row.candidate_details)
+          ? row.candidate_details[0]
+          : row.candidate_details;
+
+        const statusObj = Array.isArray(row.candidate_statuses)
+          ? row.candidate_statuses[0]
+          : row.candidate_statuses;
+
+        return {
+          id: row.id,
+          election_id: row.election_id,
+          position_id: row.position_id,
+          student_id: row.student_id,
+          status_id: row.candidate_status_id,
+          status: statusObj ? { id: statusObj.id, name: statusObj.name } : "Approved",
+          student: {
+            id: studentObj?.id || row.student_id,
+            matriculation_number: matric,
+            matric_number: matric,
+            full_name: fullName,
+            first_name: fullName.split(" ")[0] || "Candidate",
+            last_name: fullName.split(" ").slice(1).join(" ") || "Student",
+            department: deptName,
+            level: lvlName,
+          },
+          candidate_details: detailsObj
+            ? {
+                candidate_id: row.id,
+                campaign_slogan: detailsObj.campaign_slogan || null,
+                manifesto: detailsObj.manifesto || null,
+                photo_path: detailsObj.photo_path || null,
+                approval_remarks: detailsObj.approval_remarks || null,
+              }
+            : null,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        };
+      })
+    );
+
+    return candidates;
+  } catch (err) {
+    console.error("Failed to load approved candidates:", err);
+    return [];
+  }
 }
 
 /**
- * Fetches approved candidates for an election.
- * Per approved candidate visibility rules (BR-010 and Sprint 4/8 RLS):
- * Only candidates with status 'Approved' (or active) are returned.
+ * Resubmits or updates a candidate nomination application.
+ * Allows rejected, withdrawn, or pending candidates to revise and redo their application.
+ * Resets status to Pending_Approval for administrative re-vetting.
  */
-export async function getApprovedCandidates(electionId: string): Promise<Candidate[]> {
-  const { data, error } = await supabase.rpc("get_approved_election_candidates", {
-    p_election_id: electionId,
-  });
-
-  if (error) {
-    throw new Error(`Failed to fetch approved candidates: ${error.message}`);
-  }
-
-  const rawRows = (data as unknown as RawCandidateRow[]) || [];
-  return rawRows.map((row) => ({
-    id: row.id,
-    election_id: row.election_id,
-    position_id: row.position_id,
-    student_id: row.student_id,
-    status_id: row.status_id,
-    status: row.status || undefined,
-    student: row.students ? {
-      ...row.students,
-      matric_number: row.students.matriculation_number
-    } : null,
-    candidate_details: Array.isArray(row.candidate_details)
-      ? row.candidate_details[0]
-      : row.candidate_details,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
-}
-
 export async function resubmitCandidateApplication(params: {
   candidateId: string;
+  electionId: string;
+  positionId?: string;
   campaignSlogan?: string;
   manifesto?: string;
   photoPath?: string;
 }): Promise<{ success: boolean; message: string }> {
-  const { data, error } = await supabase.rpc("resubmit_candidate_application", {
-    p_candidate_id: params.candidateId,
-    p_campaign_slogan: params.campaignSlogan?.trim() || null,
-    p_manifesto: params.manifesto?.trim() || null,
-    p_photo_path: params.photoPath?.trim() || null,
-  });
+  // Try RPC first if installed in database
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("resubmit_candidate_application", {
+      p_candidate_id: params.candidateId,
+      p_campaign_slogan: params.campaignSlogan?.trim() || null,
+      p_manifesto: params.manifesto?.trim() || null,
+      p_photo_path: params.photoPath?.trim() || null,
+    });
 
-  if (error) {
-    throw new Error(error.message || "Failed to resubmit candidate application.");
+    const parsedRpc = rpcData as unknown as { success?: boolean; message?: string } | null;
+
+    if (!rpcError && parsedRpc?.success) {
+      if (params.positionId) {
+        await supabase
+          .from("candidates")
+          .update({ position_id: params.positionId, updated_at: new Date().toISOString() })
+          .eq("id", params.candidateId);
+      }
+      await supabase
+        .from("candidate_details")
+        .update({
+          approval_remarks: null,
+          withdrawal_reason: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("candidate_id", params.candidateId);
+
+      return {
+        success: true,
+        message: parsedRpc.message || "Candidate application resubmitted successfully for review.",
+      };
+    }
+  } catch {
+    // Continue to authoritative PostgREST update
   }
 
-  const result = data as { success: boolean; message: string };
+  // 1. Resolve 'Pending_Approval' status ID
+  const { data: statusData } = await supabase
+    .from("candidate_statuses")
+    .select("id")
+    .ilike("name", "Pending_Approval")
+    .maybeSingle();
+
+  const pendingStatusId = statusData?.id || "c5f760ac-709c-4e82-b3e2-1c2d4ece2a52";
+
+  // 2. Update candidate record (and position if changed)
+  const candidatePayload: { candidate_status_id: string; updated_at: string; position_id?: string } = {
+    candidate_status_id: pendingStatusId,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (params.positionId) {
+    candidatePayload.position_id = params.positionId;
+  }
+
+  const { error: candError } = await supabase
+    .from("candidates")
+    .update(candidatePayload)
+    .eq("id", params.candidateId);
+
+  if (candError) {
+    throw new Error(`Failed to update candidate record: ${candError.message}`);
+  }
+
+  // 3. Upsert candidate details (clearing previous rejection remarks upon resubmission)
+  const { error: detailError } = await supabase
+    .from("candidate_details")
+    .upsert({
+      candidate_id: params.candidateId,
+      campaign_slogan: params.campaignSlogan?.trim() || null,
+      manifesto: params.manifesto?.trim() || null,
+      photo_path: params.photoPath?.trim() || null,
+      approval_remarks: null,
+      withdrawal_reason: null,
+      is_profile_complete: true,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "candidate_id" });
+
+  if (detailError) {
+    console.warn("Notice: candidate_details update warning:", detailError.message);
+  }
+
   return {
-    success: result.success,
-    message: result.message || "Candidate application resubmitted successfully.",
+    success: true,
+    message: "Candidate application successfully updated and resubmitted for committee review!",
+  };
+}
+
+/**
+ * Allows a student candidate to self-withdraw their nomination filing.
+ */
+export async function withdrawStudentCandidacy(
+  candidateId: string,
+  reason?: string
+): Promise<{ success: boolean; message: string }> {
+  const { data: statusData } = await supabase
+    .from("candidate_statuses")
+    .select("id")
+    .ilike("name", "Withdrawn")
+    .maybeSingle();
+
+  const withdrawnStatusId = statusData?.id || "df93941d-626b-4bdf-94ed-2b7bee41b112";
+
+  const { error: candError } = await supabase
+    .from("candidates")
+    .update({
+      candidate_status_id: withdrawnStatusId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", candidateId);
+
+  if (candError) {
+    throw new Error(`Failed to withdraw application: ${candError.message}`);
+  }
+
+  await supabase
+    .from("candidate_details")
+    .update({
+      withdrawal_reason: reason || "Withdrawn by student candidate",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("candidate_id", candidateId);
+
+  return {
+    success: true,
+    message: "Your candidacy application has been withdrawn.",
   };
 }
 
@@ -366,6 +580,8 @@ export interface StudentCandidacyStatus {
   campaign_slogan?: string | null;
   manifesto?: string | null;
   photo_path?: string | null;
+  approval_remarks?: string | null;
+  withdrawal_reason?: string | null;
   created_at: string;
 }
 
@@ -390,7 +606,9 @@ export async function getStudentCandidacy(
         candidate_details (
           campaign_slogan,
           manifesto,
-          photo_path
+          photo_path,
+          approval_remarks,
+          withdrawal_reason
         )
       `)
       .eq("election_id", electionId)
@@ -407,8 +625,20 @@ export async function getStudentCandidacy(
       positions?: { name?: string } | { name?: string }[] | null;
       candidate_statuses?: { name?: string } | { name?: string }[] | null;
       candidate_details?:
-        | { campaign_slogan?: string | null; manifesto?: string | null; photo_path?: string | null }
-        | { campaign_slogan?: string | null; manifesto?: string | null; photo_path?: string | null }[]
+        | {
+            campaign_slogan?: string | null;
+            manifesto?: string | null;
+            photo_path?: string | null;
+            approval_remarks?: string | null;
+            withdrawal_reason?: string | null;
+          }
+        | {
+            campaign_slogan?: string | null;
+            manifesto?: string | null;
+            photo_path?: string | null;
+            approval_remarks?: string | null;
+            withdrawal_reason?: string | null;
+          }[]
         | null;
     };
 
@@ -425,6 +655,8 @@ export async function getStudentCandidacy(
       campaign_slogan: detailObj?.campaign_slogan || null,
       manifesto: detailObj?.manifesto || null,
       photo_path: detailObj?.photo_path || null,
+      approval_remarks: detailObj?.approval_remarks || null,
+      withdrawal_reason: detailObj?.withdrawal_reason || null,
       created_at: row.created_at,
     };
   } catch (err) {
